@@ -11,12 +11,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import TableShell from "@/components/ui/TableShell";
 import type { ScanResult } from "./ScanConsole";
 
-const EVIDENCE_FILES = [
-  { name: "findings.json / findings.csv", desc: "Canonical and tabular findings" },
-  { name: "cbom.cdx.json", desc: "CycloneDX 1.6 CBOM" },
-  { name: "executive-summary.txt", desc: "Client-facing summary" },
-  { name: "m2302-inventory.json", desc: "OMB M-23-02 inventory" },
-];
+const PAGE_SIZE = 50;
 
 function classificationVariant(c: string) {
   if (c === "quantum-vulnerable") return "vulnerable" as const;
@@ -26,17 +21,35 @@ function classificationVariant(c: string) {
 
 export default function ScanResults({ result }: { result: ScanResult | null }) {
   const [activeFinding, setActiveFinding] = useState<ScanResult["findings"][0] | null>(null);
+  const [page, setPage] = useState(0);
 
   if (!result) {
     return (
       <div className="mt-7">
         <EmptyState
           icon={<MdTravelExplore />}
-          title="Upload a ZIP to see results"
-          description="Choose a ZIP of your project above and run qSearch to discover quantum-vulnerable cryptography. Findings, an algorithm breakdown, and exportable reports will appear here."
+          title="Upload a file or ZIP to see results"
+          description="Choose a source file or ZIP archive above and run qSearch to discover quantum-vulnerable cryptography. Findings and exportable reports will appear here."
         />
       </div>
     );
+  }
+
+  const totalPages = Math.ceil(result.findings.length / PAGE_SIZE);
+  const paginated = result.findings.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const start = page * PAGE_SIZE + 1;
+  const end = Math.min((page + 1) * PAGE_SIZE, result.findings.length);
+
+  function downloadFindings() {
+    const blob = new Blob([JSON.stringify(result, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `qsearch-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -67,16 +80,20 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         />
       </div>
 
-      <SectionPanel title="Generated evidence">
-        {EVIDENCE_FILES.map((file) => (
-          <div
-            key={file.name}
-            className="border-b border-gray-200 py-3 first:pt-0 last:border-b-0 last:pb-0"
-          >
-            <strong className="block text-sm font-medium">{file.name}</strong>
-            <span className="mt-1 block text-xs text-gray-500">{file.desc}</span>
-          </div>
-        ))}
+      <SectionPanel
+        title="Export results"
+        action={
+          <span className="text-2xs text-gray-400">
+            Scan completed · {new Date().toLocaleDateString()}
+          </span>
+        }
+      >
+        <button
+          onClick={downloadFindings}
+          className="default-radius border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+        >
+          Download findings.json
+        </button>
       </SectionPanel>
 
       <SectionPanel
@@ -87,7 +104,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
           <p className="py-6 text-center text-sm text-gray-400">No findings.</p>
         ) : (
           <TableShell columns={["Algorithm", "Classification", "Risk", "Asset"]}>
-            {result.findings.slice(0, 50).map((f, i) => (
+            {paginated.map((f, i) => (
               <tr
                 key={`${f.asset}-${f.evidence}-${i}`}
                 className="cursor-pointer transition-colors hover:bg-gray-50"
@@ -104,17 +121,35 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                 <td className="border-b border-gray-100 px-3 py-3 text-sm text-gray-500">
                   {f.risk}
                 </td>
-                <td className="border-b border-gray-100 px-3 py-3 text-xs text-gray-500 font-mono truncate max-w-xs">
+                <td className="border-b border-gray-100 px-3 py-3 font-mono text-xs text-gray-500 truncate max-w-xs">
                   {f.asset}
                 </td>
               </tr>
             ))}
           </TableShell>
         )}
-        {result.findings.length > 50 && (
-          <p className="mt-3 text-xs text-gray-400">
-            Showing 50 of {result.findings.length} findings.
-          </p>
+
+        {totalPages > 1 && (
+          <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+            <span>{start}–{end} of {result.findings.length} findings</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="default-radius border border-gray-200 px-2 py-1 disabled:opacity-30 hover:bg-gray-50"
+              >
+                ←
+              </button>
+              <span>{page + 1} / {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page === totalPages - 1}
+                className="default-radius border border-gray-200 px-2 py-1 disabled:opacity-30 hover:bg-gray-50"
+              >
+                →
+              </button>
+            </div>
+          </div>
         )}
       </SectionPanel>
 

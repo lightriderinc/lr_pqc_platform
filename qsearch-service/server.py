@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import subprocess
@@ -5,6 +6,7 @@ import tempfile
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import unquote
 
 HOST = "127.0.0.1"
 PORT = int(os.getenv("QSEARCH_SERVICE_PORT", "8787"))
@@ -15,6 +17,13 @@ TIMEOUT = 300
 
 BASE = Path(__file__).resolve().parent
 QSEARCH_BIN = Path(os.getenv("QSEARCH_BIN", str(BASE / "qsearch.exe"))).resolve()
+
+SINGLE_FILE_EXTS = {
+    ".py", ".js", ".ts", ".go", ".rs", ".cpp", ".c", ".h", ".hpp",
+    ".java", ".rb", ".cs", ".yaml", ".yml", ".toml", ".json",
+    ".cfg", ".conf", ".ini", ".tf", ".sh",
+    ".pem", ".crt", ".cer",
+}
 
 def safe_extract(zf, dest):
     total = 0
@@ -35,9 +44,15 @@ def safe_extract(zf, dest):
             raise ValueError("Extracted ZIP is too large.")
     zf.extractall(root)
 
-def scan_zip(body):
+def wrap_single_file(body: bytes, filename: str) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(filename, body)
+    return buf.getvalue()
+
+def scan_zip(body: bytes):
     if len(body) > MAX_UPLOAD:
-        raise ValueError("ZIP is larger than 50 MB.")
+        raise ValueError("File is larger than 50 MB.")
     if not QSEARCH_BIN.is_file():
         raise RuntimeError(f"qSearch binary not found: {QSEARCH_BIN}")
 
@@ -89,8 +104,18 @@ class Handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if length <= 0 or length > MAX_UPLOAD:
-                raise ValueError("Invalid ZIP size.")
-            result = scan_zip(self.rfile.read(length))
+                raise ValueError("Invalid file size.")
+
+            body = self.rfile.read(length)
+            content_type = self.headers.get("Content-Type", "")
+            filename = unquote(self.headers.get("X-File-Name", "upload.zip"))
+            ext = Path(filename).suffix.lower()
+
+            # Wrap single source files into a ZIP before scanning
+            if content_type != "application/zip" and ext in SINGLE_FILE_EXTS:
+                body = wrap_single_file(body, filename)
+
+            result = scan_zip(body)
             payload = json.dumps(result).encode()
             self.send_response(200)
         except zipfile.BadZipFile:

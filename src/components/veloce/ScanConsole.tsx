@@ -46,7 +46,7 @@ export default function ScanConsole({
         <input
           ref={inputRef}
           type="file"
-          accept=".zip,application/zip"
+          accept=".zip,.py,.js,.ts,.go,.rs,.cpp,.c,.h,.hpp,.java,.rb,.cs,.yaml,.yml,.toml,.json,.cfg,.conf,.pem,.crt,.cer,application/zip"
           className="hidden"
           onChange={(e) => {
             setFile(e.target.files?.[0] ?? null);
