@@ -1,25 +1,29 @@
-import { MdDashboard } from "react-icons/md";
+import { MdVerifiedUser, MdTravelExplore } from "react-icons/md";
 import SidebarNavGroup from "./SidebarNavGroup";
 import SidebarNavItem from "./SidebarNavItem";
 
-// The default (top-level) navigation shown in the primary sidebar on every
-// route. Add new PQC sections here as SidebarNavItem entries, grouped under a
-// SidebarNavGroup — the same way the cloud platform groups Compute / Explore.
+// Primary sidebar navigation. Veloce IS the platform, so there's a single
+// section holding the dashboard and qSearch — no separate "Platform" group.
+// The dashboard keeps the original security icon; only its label was renamed.
 export default function SidebarGroupDefault({
   onNavigate,
 }: {
   onNavigate?: () => void;
 }) {
   return (
-    <>
-      <SidebarNavGroup label="Platform">
-        <SidebarNavItem
-          name="Dashboard"
-          href="/"
-          icon={MdDashboard}
-          onNavigate={onNavigate}
-        />
-      </SidebarNavGroup>
-    </>
+    <SidebarNavGroup label="Veloce">
+      <SidebarNavItem
+        name="Dashboard"
+        href="/security"
+        icon={MdVerifiedUser}
+        onNavigate={onNavigate}
+      />
+      <SidebarNavItem
+        name="qSearch"
+        href="/qsearch"
+        icon={MdTravelExplore}
+        onNavigate={onNavigate}
+      />
+    </SidebarNavGroup>
   );
 }
