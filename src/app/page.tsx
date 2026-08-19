@@ -29,7 +29,7 @@ export default function Home() {
           <StatCard label="PQC provider" sub="ML-KEM-768 + ML-DSA-65" />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-8 xl:gap-4 xl:grid-cols-2">
           <ValidationComponentsPanel />
           <BuildIdentityPanel />
         </div>
