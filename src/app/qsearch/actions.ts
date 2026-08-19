@@ -1,12 +1,27 @@
 "use server";
 
-const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+import { execFile } from "child_process";
+import { promisify } from "util";
+import { mkdir, writeFile, rm, readFile } from "fs/promises";
+import { join } from "path";
+import { tmpdir } from "os";
+import { randomBytes } from "crypto";
+import { chmodSync } from "fs";
+
+const execFileAsync = promisify(execFile);
+const MAX_UPLOAD = 50 * 1024 * 1024;
+const TIMEOUT = 300_000;
+
+const QSEARCH_BIN = join(
+  process.cwd(),
+  "qsearch-service",
+  process.platform === "win32" ? "qsearch.exe" : "qsearch"
+);
 
 const SINGLE_FILE_EXTS = new Set([
   ".py", ".js", ".ts", ".go", ".rs", ".cpp", ".c", ".h", ".hpp",
   ".java", ".rb", ".cs", ".yaml", ".yml", ".toml", ".json",
-  ".cfg", ".conf", ".ini", ".tf", ".sh",
-  ".pem", ".crt", ".cer",
+  ".cfg", ".conf", ".ini", ".tf", ".sh", ".pem", ".crt", ".cer",
 ]);
 
 export type ScanResult = {
@@ -33,58 +48,87 @@ function getExt(name: string) {
 }
 
 export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
-  const serviceUrl = process.env.QSEARCH_SERVICE_URL;
-  if (!serviceUrl) {
-    return { ok: false, error: "qSearch service is not configured." };
-  }
-
   const file = formData.get("file");
   if (!(file instanceof File)) {
     return { ok: false, error: "A file is required." };
   }
 
-  if (file.size > MAX_UPLOAD_BYTES) {
+  if (file.size > MAX_UPLOAD) {
     return { ok: false, error: "File is larger than 50 MB." };
   }
 
   const ext = getExt(file.name);
   const isZip = ext === ".zip";
-  const isSingleFile = SINGLE_FILE_EXTS.has(ext);
+  const isSingle = SINGLE_FILE_EXTS.has(ext);
 
-  if (!isZip && !isSingleFile) {
-    return {
-      ok: false,
-      error: `Unsupported file type. Upload a ZIP archive or a single source file (${[...SINGLE_FILE_EXTS].join(", ")}).`,
-    };
+  if (!isZip && !isSingle) {
+    return { ok: false, error: "Unsupported file type. Upload a ZIP or a source file." };
   }
 
-  const body = Buffer.from(await file.arrayBuffer());
+  const id = randomBytes(8).toString("hex");
+  const tmp = join(tmpdir(), `qsearch-${id}`);
+  const srcDir = join(tmp, "source");
+  const outDir = join(tmp, "output");
 
-  let response: Response;
   try {
-    response = await fetch(serviceUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": isZip ? "application/zip" : "application/octet-stream",
-        "X-File-Name": encodeURIComponent(file.name),
+    await mkdir(srcDir, { recursive: true });
+    await mkdir(outDir, { recursive: true });
+
+    const bytes = Buffer.from(await file.arrayBuffer());
+
+    if (isZip) {
+      const zipPath = join(tmp, "upload.zip");
+      await writeFile(zipPath, bytes);
+      await execFileAsync(
+        process.platform === "win32" ? "python" : "python3", [
+        "-c",
+        `import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])`,
+        zipPath,
+        srcDir,
+      ], { timeout: 30_000 });
+    } else {
+      await writeFile(join(srcDir, file.name), bytes);
+    }
+
+    try { chmodSync(QSEARCH_BIN, 0o755); } catch { /* windows ok */ }
+
+    await execFileAsync(
+      QSEARCH_BIN,
+      ["scan", srcDir, "--out", outDir, "--quiet"],
+      { timeout: TIMEOUT }
+    );
+
+    const raw = JSON.parse(
+      await readFile(join(outDir, "findings.json"), "utf8")
+    );
+
+    const findings = raw.findings ?? [];
+    return {
+      ok: true,
+      data: {
+        files_scanned: raw.files_scanned ?? 0,
+        quantum_vulnerable: findings.filter((f: { classification: string }) => f.classification === "quantum-vulnerable").length,
+        high_risk: findings.filter((f: { risk: string }) => f.risk === "high").length,
+        pqc_ready: findings.filter((f: { classification: string }) => f.classification === "pqc-ready").length,
+        findings: findings.map((f: {
+          algorithm?: string;
+          classification?: string;
+          risk?: string;
+          asset?: string;
+          evidence?: string;
+        }) => ({
+          algorithm: f.algorithm ?? "",
+          classification: f.classification ?? "",
+          risk: f.risk ?? "",
+          asset: f.asset ?? "",
+          evidence: f.evidence ?? "",
+        })),
       },
-      body,
-    });
-  } catch {
-    return {
-      ok: false,
-      error: "qSearch service is not reachable. Make sure qsearch-service/server.py is running.",
     };
-  }
-
-  const text = await response.text();
-  if (!response.ok) {
-    return { ok: false, error: text || "qSearch service failed." };
-  }
-
-  try {
-    return { ok: true, data: JSON.parse(text) as ScanResult };
-  } catch {
-    return { ok: false, error: "qSearch returned unexpected output." };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Scan failed.";
+    return { ok: false, error: message };
+  } finally {
+    await rm(tmp, { recursive: true, force: true }).catch(() => { });
   }
 }
