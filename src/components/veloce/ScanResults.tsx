@@ -188,26 +188,43 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         }
       >
         {activeFinding && (
-          <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3 text-sm">
-            {[
-              ["Algorithm", activeFinding.algorithm],
-              ["Service", activeFinding.service],
-              ["Classification", activeFinding.classification],
-              ["Risk", activeFinding.risk],
-              ["Confidence", activeFinding.confidence],
-              ["Provenance", activeFinding.provenance],
-              ["Asset", activeFinding.asset],
-              ["Evidence", activeFinding.evidence],
-              ["Detail", activeFinding.detail],
-            ]
-              .filter(([, value]) => value)
-              .map(([label, value]) => (
-                <div key={label} className="contents">
-                  <dt className="text-xs uppercase tracking-wide text-gray-400">
-                    {label}
+          <dl className="default-radius overflow-hidden text-sm">
+            {(
+              [
+                { label: "Algorithm", value: activeFinding.algorithm },
+                { label: "Service", value: activeFinding.service },
+                { label: "Classification", value: activeFinding.classification },
+                { label: "Risk", value: activeFinding.risk },
+                { label: "Confidence", value: activeFinding.confidence },
+                { label: "Provenance", value: activeFinding.provenance },
+                { label: "Asset", value: activeFinding.asset },
+                { label: "Evidence", value: activeFinding.evidence },
+                { label: "Detail", value: activeFinding.detail },
+              ] as const
+            )
+              .filter((row) => row.value)
+              .map((row, i, arr) => (
+                <div
+                  key={row.label}
+                  className={`grid grid-cols-[120px_1fr] gap-x-4 px-4 py-3 ${
+                    i === arr.length - 1 ? "" : "border-b-2 border-gray-50"
+                  }`}
+                >
+                  <dt className="text-xs flex items-center uppercase font-medium tracking-wide text-gray-400">
+                    {row.label}
                   </dt>
-                  <dd className="m-0 break-all text-gray-700">
-                    {value || "—"}
+                  <dd className="break-all text-gray-700">
+                    {row.label === "Classification" ? (
+                      <Badge variant={classificationVariant(row.value)}>
+                        {row.value}
+                      </Badge>
+                    ) : row.label === "Asset" || row.label === "Evidence" ? (
+                      <span className="font-mono text-xs text-gray-500">
+                        {row.value}
+                      </span>
+                    ) : (
+                      row.value || "—"
+                    )}
                   </dd>
                 </div>
               ))}
