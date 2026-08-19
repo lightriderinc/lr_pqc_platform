@@ -3,10 +3,11 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { mkdir, writeFile, rm, readFile } from "fs/promises";
+import { chmodSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { randomBytes } from "crypto";
-import { chmodSync } from "fs";
+import { unzipSync } from "fflate";
 
 const execFileAsync = promisify(execFile);
 const MAX_UPLOAD = 50 * 1024 * 1024;
@@ -79,13 +80,15 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
     if (isZip) {
       const zipPath = join(tmp, "upload.zip");
       await writeFile(zipPath, bytes);
-      await execFileAsync(
-        process.platform === "win32" ? "python" : "python3", [
-        "-c",
-        `import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])`,
-        zipPath,
-        srcDir,
-      ], { timeout: 30_000 });
+
+      const zipBytes = new Uint8Array(bytes);
+      const extracted = unzipSync(zipBytes);
+      for (const [filename, content] of Object.entries(extracted)) {
+        if (filename.endsWith("/")) continue;
+        const outPath = join(srcDir, filename);
+        await mkdir(outPath.substring(0, outPath.lastIndexOf("/")), { recursive: true }).catch(() => { });
+        await writeFile(outPath, content);
+      }
     } else {
       await writeFile(join(srcDir, file.name), bytes);
     }
