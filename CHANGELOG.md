@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.0.0...v1.0.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* Fips hero card styles + modal updated ([550f447](https://github.com/lightriderinc/lr_pqc_platform/commit/550f447d3b615f0e1b684fd55883cf48bdd2f91e))
+* updated visible pages and routing ([6b633b8](https://github.com/lightriderinc/lr_pqc_platform/commit/6b633b8cdbfa78914699cceacb6d308ff1d9d658))
+
 # 1.0.0 (2026-08-17)
 
 
