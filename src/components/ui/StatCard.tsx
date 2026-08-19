@@ -24,15 +24,15 @@ export default function StatCard({
   accent?: StatAccent;
 }) {
   return (
-    <article className="default-radius relative overflow-hidden border border-gray-100 bg-white p-5">
-      <span className="block text-2xs font-medium uppercase tracking-[0.13em] text-gray-400">
+    <article className="default-radius relative overflow-hidden bg-gray-50 p-4">
+      <span className="block text-md font-semibold text-gray-300">
         {label}
       </span>
       <strong className="mt-2 block text-2xl font-semibold">{value}</strong>
       {sub && <small className="mt-1 block text-sm text-gray-500">{sub}</small>}
       <span
         aria-hidden
-        className={`absolute inset-x-0 bottom-0 h-0.5 ${accentBar[accent]}`}
+        className={`absolute inset-x-0 bottom-0 h-0.75 ${accentBar[accent]}`}
       />
     </article>
   );

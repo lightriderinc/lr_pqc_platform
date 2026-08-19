@@ -12,8 +12,10 @@ export default function Home() {
       <p className="mb-12 text-sm text-gray-600">
         Light Rider post-quantum cryptography platform.
       </p>
-      <h2 className="mb-4 text-xl font-bold text-gray-600">Cryptographic runtime</h2>
-      <div className="grid gap-5">
+      <h2 className="mb-4 text-xl font-bold text-gray-600">
+        Cryptographic runtime
+      </h2>
+      <div className="grid gap-4">
         <FipsAssuranceHero />
 
         <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
