@@ -102,7 +102,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
       <SectionPanel
         title="Observed cryptography"
         action={<Badge>{result.findings.length} findings</Badge>}
-        cardStyle={result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"}
+        cardStyle={
+          result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
+        }
       >
         {result.findings.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No findings.</p>
@@ -127,7 +129,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                       {f.classification}
                     </Badge>
                   </td>
-                  <td className={`${borderClass} px-4  py-3 text-sm text-gray-500`}>
+                  <td
+                    className={`${borderClass} px-4  py-3 text-sm text-gray-500`}
+                  >
                     {f.risk}
                   </td>
                   <td
@@ -184,49 +188,29 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         }
       >
         {activeFinding && (
-          <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3">
-            <div className="contents">
-              <dt className="text-xs uppercase tracking-wide text-gray-400">
-                Algorithm
-              </dt>
-              <dd className="m-0 text-sm text-gray-700">
-                {activeFinding.algorithm || "—"}
-              </dd>
-            </div>
-            <div className="contents">
-              <dt className="text-xs uppercase tracking-wide text-gray-400">
-                Classification
-              </dt>
-              <dd className="m-0">
-                <Badge variant={classificationVariant(activeFinding.classification)}>
-                  {activeFinding.classification}
-                </Badge>
-              </dd>
-            </div>
-            <div className="contents">
-              <dt className="text-xs uppercase tracking-wide text-gray-400">
-                Risk
-              </dt>
-              <dd className="m-0 text-sm text-gray-500">
-                {activeFinding.risk || "—"}
-              </dd>
-            </div>
-            <div className="contents">
-              <dt className="text-xs uppercase tracking-wide text-gray-400">
-                Asset
-              </dt>
-              <dd className="m-0 break-all font-mono text-xs text-gray-500">
-                {activeFinding.asset || "—"}
-              </dd>
-            </div>
-            <div className="contents">
-              <dt className="text-xs uppercase tracking-wide text-gray-400">
-                Evidence
-              </dt>
-              <dd className="m-0 break-all font-mono text-xs text-gray-500">
-                {activeFinding.evidence || "—"}
-              </dd>
-            </div>
+          <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3 text-sm">
+            {[
+              ["Algorithm", activeFinding.algorithm],
+              ["Service", activeFinding.service],
+              ["Classification", activeFinding.classification],
+              ["Risk", activeFinding.risk],
+              ["Confidence", activeFinding.confidence],
+              ["Provenance", activeFinding.provenance],
+              ["Asset", activeFinding.asset],
+              ["Evidence", activeFinding.evidence],
+              ["Detail", activeFinding.detail],
+            ]
+              .filter(([, value]) => value)
+              .map(([label, value]) => (
+                <div key={label} className="contents">
+                  <dt className="text-xs uppercase tracking-wide text-gray-400">
+                    {label}
+                  </dt>
+                  <dd className="m-0 break-all text-gray-700">
+                    {value || "—"}
+                  </dd>
+                </div>
+              ))}
           </dl>
         )}
       </Modal>
