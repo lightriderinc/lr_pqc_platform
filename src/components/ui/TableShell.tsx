@@ -13,14 +13,14 @@ export default function TableShell({
   emptyLabel?: string;
 }) {
   return (
-    <div className="default-radius max-h-[480px] overflow-auto border border-gray-100 bg-white">
+    <div className="default-radius max-h-[480px] overflow-auto border border-gray-50 bg-white">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr>
             {columns.map((col) => (
               <th
                 key={col}
-                className="sticky top-0 border-b border-gray-100 bg-gray-50 px-3 py-3 text-left text-2xs font-semibold uppercase tracking-[0.08em] text-gray-400"
+                className="sticky top-0 border-b border-gray-100 bg-gray-50 px-4 py-2 text-left font-medium text-gray-700"
               >
                 {col}
               </th>
