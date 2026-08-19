@@ -1,137 +1,199 @@
 "use client";
 
-import { useState } from "react";
-import { MdFolderOpen, MdTravelExplore } from "react-icons/md";
-import SectionPanel from "@/components/ui/SectionPanel";
-import StatCard from "@/components/ui/StatCard";
 import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
 import LRButton from "@/components/ui/LRButton";
 import Modal from "@/components/ui/Modal";
-import EmptyState from "@/components/ui/EmptyState";
-import BarChartPlaceholder from "@/components/ui/BarChartPlaceholder";
+import SectionPanel from "@/components/ui/SectionPanel";
+import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
+import { useState } from "react";
+import { MdDownload, MdTravelExplore } from "react-icons/md";
+import type { ScanResult } from "./ScanConsole";
 
-// Discovery results shell. Until a scan returns data, the whole area is a
-// call-to-action empty state. Once wired in, flip `hasResults` to render the
-// metric row, algorithm chart, generated-evidence list, and findings table
-// (header-outside / gray-box SectionPanel pattern).
+const PAGE_SIZE = 50;
 
-const EVIDENCE_FILES = [
-  { name: "findings.json / findings.csv", desc: "Canonical and tabular findings" },
-  { name: "cbom.cdx.json", desc: "CycloneDX 1.6 CBOM" },
-  { name: "executive-summary.txt", desc: "Client-facing summary" },
-  { name: "m2302-inventory.json", desc: "OMB M-23-02 inventory" },
-];
+function classificationVariant(c: string) {
+  if (c === "quantum-vulnerable") return "vulnerable" as const;
+  if (c === "pqc-ready") return "ready" as const;
+  return "context" as const;
+}
 
-export default function ScanResults() {
-  // Flip to true when a qSearch run completes and populates results.
-  const [hasResults] = useState(false);
-  const [findingOpen, setFindingOpen] = useState(false);
+export default function ScanResults({ result }: { result: ScanResult | null }) {
+  const [activeFinding, setActiveFinding] = useState<
+    ScanResult["findings"][0] | null
+  >(null);
+  const [page, setPage] = useState(0);
 
-  if (!hasResults) {
+  if (!result) {
     return (
-      <div className="mt-7">
+      <div className="mt-6">
         <EmptyState
           icon={<MdTravelExplore />}
-          title="Scan your project folder to see results"
-          description="Choose a folder above and run qSearch to discover quantum-vulnerable cryptography. Findings, an algorithm breakdown, and exportable reports will appear here."
+          title="Upload a file or ZIP to see results"
+          description="Choose a source file or ZIP archive above and run qSearch to discover quantum-vulnerable cryptography. Findings and exportable reports will appear here."
         />
       </div>
     );
   }
 
-  return (
-    <div className="mt-7 grid gap-5">
-      <div className="flex justify-start">
-        <LRButton
-          variant="secondary-outline"
-          icon={<MdFolderOpen className="text-lg" />}
-        >
-          Open report folder
-        </LRButton>
-      </div>
+  const totalPages = Math.ceil(result.findings.length / PAGE_SIZE);
+  const paginated = result.findings.slice(
+    page * PAGE_SIZE,
+    (page + 1) * PAGE_SIZE,
+  );
+  const start = page * PAGE_SIZE + 1;
+  const end = Math.min((page + 1) * PAGE_SIZE, result.findings.length);
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Files scanned" value="0" sub="Readable source & certs" />
+  function downloadFindings() {
+    const blob = new Blob([JSON.stringify(result, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `qsearch-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="mt-4 grid gap-5">
+      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard
+          label="Files scanned"
+          value={String(result.files_scanned)}
+          sub="Readable source & certs"
+        />
         <StatCard
           label="Quantum-vulnerable"
-          value="0"
+          value={String(result.quantum_vulnerable)}
           sub="Prioritize migration"
-          accent="bad"
+          accent={result.quantum_vulnerable > 0 ? "bad" : "good"}
         />
-        <StatCard label="High risk" value="0" sub="High-priority findings" />
+        <StatCard
+          label="High risk"
+          value={String(result.high_risk)}
+          sub="High-priority findings"
+          accent={result.high_risk > 0 ? "warn" : "neutral"}
+        />
         <StatCard
           label="PQC-ready"
-          value="0"
+          value={String(result.pqc_ready)}
           sub="Post-quantum usage"
-          accent="good"
+          accent={result.pqc_ready > 0 ? "good" : "neutral"}
         />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <SectionPanel title="Algorithms by count">
-          <BarChartPlaceholder />
-        </SectionPanel>
-
-        <SectionPanel title="Generated evidence">
-          {EVIDENCE_FILES.map((file) => (
-            <div
-              key={file.name}
-              className="border-b border-gray-200 py-3 first:pt-0 last:border-b-0 last:pb-0"
-            >
-              <strong className="block text-sm font-medium">{file.name}</strong>
-              <span className="mt-1 block text-xs text-gray-500">
-                {file.desc}
-              </span>
-            </div>
-          ))}
-        </SectionPanel>
+      <div className="-mt-4 mb-3 flex items-start justify-between gap-4">
+        <span className="text-md font-medium text-gray-400">
+          Scan completed · {new Date().toLocaleDateString()}
+        </span>
+        <LRButton
+          variant="secondary-outline"
+          icon={<MdDownload className="text-lg" />}
+          onClick={downloadFindings}
+          className="default-radius border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+        >
+          Download findings.json
+        </LRButton>
       </div>
 
       <SectionPanel
         title="Observed cryptography"
-        action={<Badge>0 findings</Badge>}
+        action={<Badge>{result.findings.length} findings</Badge>}
       >
-        <TableShell columns={["Algorithm", "Classification", "Risk", "Asset"]}>
-          {/* One placeholder row to show row layout + the detail modal. */}
-          <tr
-            className="cursor-pointer transition-colors hover:bg-gray-50"
-            onClick={() => setFindingOpen(true)}
+        {result.findings.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">No findings.</p>
+        ) : (
+          <TableShell
+            columns={["Algorithm", "Classification", "Risk", "Asset"]}
           >
-            <td className="border-b border-gray-100 px-3 py-3 text-gray-300">
-              —
-            </td>
-            <td className="border-b border-gray-100 px-3 py-3">
-              <Badge variant="context">example</Badge>
-            </td>
-            <td className="border-b border-gray-100 px-3 py-3 text-gray-300">
-              —
-            </td>
-            <td className="border-b border-gray-100 px-3 py-3 text-gray-300">
-              Click to preview finding modal
-            </td>
-          </tr>
-        </TableShell>
+            {paginated.map((f, i) => (
+              <tr
+                key={`${f.asset}-${f.evidence}-${i}`}
+                className="cursor-pointer transition-colors hover:bg-gray-50"
+                onClick={() => setActiveFinding(f)}
+              >
+                <td className="border-b border-gray-100 px-3 py-3 text-sm font-medium">
+                  {f.algorithm}
+                </td>
+                <td className="border-b border-gray-100 px-3 py-3">
+                  <Badge variant={classificationVariant(f.classification)}>
+                    {f.classification}
+                  </Badge>
+                </td>
+                <td className="border-b border-gray-100 px-3 py-3 text-sm text-gray-500">
+                  {f.risk}
+                </td>
+                <td className="border-b border-gray-100 px-3 py-3 font-mono text-xs text-gray-500 truncate max-w-xs">
+                  {f.asset}
+                </td>
+              </tr>
+            ))}
+          </TableShell>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+            <span>
+              {start}–{end} of {result.findings.length} findings
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="default-radius border border-gray-200 px-2 py-1 disabled:opacity-30 hover:bg-gray-50"
+              >
+                ←
+              </button>
+              <span>
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page === totalPages - 1}
+                className="default-radius border border-gray-200 px-2 py-1 disabled:opacity-30 hover:bg-gray-50"
+              >
+                →
+              </button>
+            </div>
+          </div>
+        )}
       </SectionPanel>
 
       <Modal
-        open={findingOpen}
-        onClose={() => setFindingOpen(false)}
+        open={!!activeFinding}
+        onClose={() => setActiveFinding(null)}
         eyebrow="Finding"
-        title="Finding details"
+        title={activeFinding?.algorithm ?? "Finding details"}
         footer={
           <LRButton
             variant="secondary-outline"
-            onClick={() => setFindingOpen(false)}
+            onClick={() => setActiveFinding(null)}
           >
             Close
           </LRButton>
         }
       >
-        <div className="default-radius border border-dashed border-gray-300 p-10 text-center text-sm text-gray-400">
-          Algorithm, classification, risk, asset path, and evidence will render
-          here.
-        </div>
+        {activeFinding && (
+          <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3 text-sm">
+            {[
+              ["Algorithm", activeFinding.algorithm],
+              ["Classification", activeFinding.classification],
+              ["Risk", activeFinding.risk],
+              ["Asset", activeFinding.asset],
+              ["Evidence", activeFinding.evidence],
+            ].map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-xs uppercase tracking-wide text-gray-400">
+                  {label}
+                </dt>
+                <dd className="m-0 break-all text-gray-700">{value || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </Modal>
     </div>
   );

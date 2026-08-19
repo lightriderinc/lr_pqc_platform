@@ -1,8 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { MdClose } from "react-icons/md";
-import type { ReactNode } from "react";
 
 // Reusable modal shell for the PQC platform. Controlled via `open` / `onClose`.
 // Renders a dimmed backdrop and a centered white panel (sharp corners, thin
@@ -47,10 +47,10 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
         className="animate-scale-in default-radius w-full max-w-lg border border-gray-200 bg-white shadow-xl"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
+        <div className="flex items-start justify-between gap-4 px-6 py-4">
           <div>
             {eyebrow && (
-              <p className="color-brand-primary font-mono text-2xs font-bold uppercase tracking-[0.2em]">
+              <p className="text-gray-300 text-xs font-medium tracking-wider">
                 {eyebrow}
               </p>
             )}
@@ -69,7 +69,7 @@ export default function Modal({
         <div className="px-6 py-5">{children}</div>
 
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-gray-100 px-6 py-4">
+          <div className="flex justify-end gap-2 px-6 py-4">
             {footer}
           </div>
         )}

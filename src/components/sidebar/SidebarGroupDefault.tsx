@@ -1,4 +1,4 @@
-import { MdVerifiedUser, MdTravelExplore } from "react-icons/md";
+import { MdTravelExplore, MdVerifiedUser } from "react-icons/md";
 import SidebarNavGroup from "./SidebarNavGroup";
 import SidebarNavItem from "./SidebarNavItem";
 
@@ -14,7 +14,7 @@ export default function SidebarGroupDefault({
     <SidebarNavGroup label="Veloce">
       <SidebarNavItem
         name="Dashboard"
-        href="/security"
+        href="/"
         icon={MdVerifiedUser}
         onNavigate={onNavigate}
       />

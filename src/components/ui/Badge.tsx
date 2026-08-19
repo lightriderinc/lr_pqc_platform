@@ -29,7 +29,7 @@ export default function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-2xs uppercase tracking-[0.08em] ${variantClasses[variant]} ${className}`}
+      className={`text-2xs font-semibold uppercase tracking-wider ${variantClasses[variant]} ${className}`}
     >
       {children}
     </span>

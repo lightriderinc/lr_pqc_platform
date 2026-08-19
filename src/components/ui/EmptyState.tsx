@@ -15,7 +15,7 @@ export default function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="default-radius border border-dashed border-gray-300 bg-gray-50 px-6 py-16 text-center">
+    <div className="default-radius border border-dashed border-gray-200 bg-gray-50 px-4 py-16 text-center">
       {icon && (
         <div className="mb-4 flex justify-center text-4xl text-gray-300">
           {icon}

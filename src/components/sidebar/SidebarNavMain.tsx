@@ -1,6 +1,6 @@
 "use client";
 
-import { MdGavel, MdHelpCenter, MdSettings } from "react-icons/md";
+import { MdHelpCenter } from "react-icons/md";
 import SidebarGroupDefault from "./SidebarGroupDefault";
 import SidebarNavItem from "./SidebarNavItem";
 
@@ -20,12 +20,12 @@ export default function SidebarNavMain({
 
       <div className="border-t border-gray-100 px-3 py-4">
         <ul>
-          <SidebarNavItem
+          {/* <SidebarNavItem
             name="Settings"
             icon={MdSettings}
             href="/settings"
             onNavigate={onNavigate}
-          />
+          /> */}
           <SidebarNavItem
             name="Contact"
             icon={MdHelpCenter}
@@ -33,12 +33,12 @@ export default function SidebarNavMain({
             external
             onNavigate={onNavigate}
           />
-          <SidebarNavItem
+          {/* <SidebarNavItem
             name="Legal"
             icon={MdGavel}
             href="/legal"
             onNavigate={onNavigate}
-          />
+          /> */}
         </ul>
       </div>
     </>

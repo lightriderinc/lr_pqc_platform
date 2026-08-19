@@ -18,13 +18,13 @@ export default function SectionPanel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={className}>
+    <section className={`flex h-full flex-col ${className}`}>
       <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className="text-xl font-bold text-gray-600">{title}</h2>
         {action}
       </div>
       <div
-        className={`default-radius border border-gray-100 bg-gray-50 p-4 sm:p-6 ${bodyClassName}`}
+        className={`default-radius flex-1 bg-gray-50 p-4 sm:p-6 ${bodyClassName}`}
       >
         {children}
       </div>
