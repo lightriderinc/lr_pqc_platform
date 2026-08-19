@@ -16,7 +16,7 @@ export default function ValidationComponentsPanel() {
     <SectionPanel
       title="Validation components"
       action={
-        <span className="text-2xs font-medium uppercase tracking-[0.08em] text-[var(--brand-tertiary)]">
+        <span className="text-2xs font-semibold uppercase tracking-wider text-[var(--brand-tertiary)]">
           No live data
         </span>
       }
@@ -24,9 +24,9 @@ export default function ValidationComponentsPanel() {
       {PLACEHOLDER_ITEMS.map((item) => (
         <div
           key={item.name}
-          className="grid grid-cols-[10px_1fr_auto] items-start gap-3 border-b border-gray-200 py-4 first:pt-0 last:border-b-0 last:pb-0"
+          className="grid grid-cols-[10px_1fr_auto] items-start gap-3 border-b-2 border-gray-100 py-4 first:pt-0 last:border-b-0 last:pb-0"
         >
-          <span className="mt-1.5 h-2.5 w-2.5 rounded-full bg-gray-300" />
+          <span className="mt-1.5 h-2.5 w-2.5 rounded-full bg-gray-200" />
           <div>
             <strong className="block text-sm font-medium">{item.name}</strong>
             <p className="mt-1 text-xs leading-relaxed text-gray-500">

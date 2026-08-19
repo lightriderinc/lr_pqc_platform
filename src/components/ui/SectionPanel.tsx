@@ -24,7 +24,7 @@ export default function SectionPanel({
         {action}
       </div>
       <div
-        className={`default-radius border border-gray-100 bg-gray-50 p-4 sm:p-6 ${bodyClassName}`}
+        className={`default-radius bg-gray-50 p-4 sm:p-6 ${bodyClassName}`}
       >
         {children}
       </div>
