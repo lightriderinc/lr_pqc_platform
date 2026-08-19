@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { MdUploadFile, MdSearch } from "react-icons/md";
-import LRButton from "@/components/ui/LRButton";
-import { runQSearch } from "@/app/qsearch/actions";
 import type { ScanResult } from "@/app/qsearch/actions";
+import { runQSearch } from "@/app/qsearch/actions";
+import LRButton from "@/components/ui/LRButton";
+import { useRef, useState } from "react";
+import { MdSearch, MdUploadFile } from "react-icons/md";
 
 export type { ScanResult };
 
@@ -37,8 +37,8 @@ export default function ScanConsole({
   }
 
   return (
-    <div className="default-radius border border-gray-100 bg-gray-50 p-6">
-      <label className="block text-xs text-gray-500">Source archive</label>
+    <div className="default-radius bg-gray-50 p-4">
+      <label className="block text-md font-semibold text-gray-300 mb-4">Source archive</label>
       <p className="mb-3 mt-0.5 text-xs text-gray-400">
         Upload a ZIP of your project folder to scan.
       </p>
