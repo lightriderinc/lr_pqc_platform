@@ -24,7 +24,7 @@ export default function BuildIdentityPanel() {
             key={field}
             className="grid grid-cols-[130px_1fr] gap-3 border-b-2 border-gray-100 py-3 first:pt-0 last:border-b-0 last:pb-0"
           >
-            <dt className="text-2xs uppercase tracking-wider font-medium font-mono text-gray-500">
+            <dt className="text-xs uppercase tracking-wider font-medium text-gray-400">
               {field}
             </dt>
             <dd className="m-0 break-words text-xs text-gray-500">—</dd>
