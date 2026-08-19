@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { MdRefresh, MdPlayArrow } from "react-icons/md";
 import LRButton from "@/components/ui/LRButton";
 import Modal from "@/components/ui/Modal";
+import { useState } from "react";
+import { MdPlayArrow, MdRefresh } from "react-icons/md";
 
 // Top box of the Security dashboard: the FIPS module assurance statement plus
 // the Refresh / Run self-tests actions. "Run self-tests" opens an (empty)
@@ -14,17 +14,14 @@ export default function FipsAssuranceHero() {
 
   return (
     <>
-      <div className="default-radius flex flex-col items-start justify-between gap-4 border border-gray-100 bg-gray-50 p-6 sm:flex-row sm:items-center">
+      <div className="default-radius flex flex-col items-start justify-between gap-4 bg-gray-50 p-4 sm:flex-row sm:items-center">
         <div>
-          <p className="color-brand-primary font-mono text-2xs font-bold uppercase tracking-[0.2em]">
-            Cryptographic runtime
-          </p>
-          <h2 className="mt-1 text-xl font-medium">FIPS module assurance</h2>
+          <h3 className="mt-1 text-xl font-medium">FIPS module assurance</h3>
           <p className="mt-1 text-sm text-gray-500">
             Live status from the local Veloce agent will appear here.
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex sm:h-full shrink-0 items-end gap-2">
           <LRButton
             variant="secondary-outline"
             icon={<MdRefresh className="text-lg" />}
@@ -55,7 +52,7 @@ export default function FipsAssuranceHero() {
           </LRButton>
         }
       >
-        <div className="default-radius border border-dashed border-gray-300 p-10 text-center text-sm text-gray-400">
+        <div className="default-radius border border-dashed bg-gray-50 border-gray-200 p-10 text-center text-sm text-gray-400">
           Self-test output will render here.
         </div>
       </Modal>

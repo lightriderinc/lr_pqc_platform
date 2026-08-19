@@ -9,14 +9,14 @@ export default function Home() {
   return (
     <div className="animate-fade-in-up">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <p className="mb-6 text-sm text-gray-600">
+      <p className="mb-12 text-sm text-gray-600">
         Light Rider post-quantum cryptography platform.
       </p>
-
-      <div className="mt-6 grid gap-5">
+      <h2 className="mb-4 text-xl font-bold text-gray-600">Cryptographic runtime</h2>
+      <div className="grid gap-5">
         <FipsAssuranceHero />
 
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
             label="Approved mode"
             sub="Awaiting live status"
