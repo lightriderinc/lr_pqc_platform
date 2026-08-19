@@ -10,21 +10,23 @@ export default function SectionPanel({
   children,
   className = "",
   bodyClassName = "",
+  cardStyle = "p-4 sm:p-6 bg-gray-50",
 }: {
   title: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
+  cardStyle?: string;
 }) {
   return (
     <section className={`flex h-full flex-col ${className}`}>
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <h2 className="text-xl font-bold text-gray-600">{title}</h2>
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <span className="text-xl font-bold text-gray-600">{title}</span>
         {action}
       </div>
       <div
-        className={`default-radius flex-1 bg-gray-50 p-4 sm:p-6 ${bodyClassName}`}
+        className={`default-radius flex-1 ${cardStyle} ${bodyClassName}`}
       >
         {children}
       </div>

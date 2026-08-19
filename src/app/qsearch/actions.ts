@@ -1,13 +1,13 @@
 "use server";
 
 import { execFile } from "child_process";
-import { promisify } from "util";
-import { mkdir, writeFile, rm, readFile } from "fs/promises";
-import { chmodSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
 import { randomBytes } from "crypto";
 import { unzipSync } from "fflate";
+import { chmodSync } from "fs";
+import { mkdir, readFile, rm, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
+import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
 const MAX_UPLOAD = 50 * 1024 * 1024;
@@ -16,13 +16,34 @@ const TIMEOUT = 300_000;
 const QSEARCH_BIN = join(
   process.cwd(),
   "qsearch-service",
-  process.platform === "win32" ? "qsearch.exe" : "qsearch"
+  process.platform === "win32" ? "qsearch.exe" : "qsearch",
 );
 
 const SINGLE_FILE_EXTS = new Set([
-  ".py", ".js", ".ts", ".go", ".rs", ".cpp", ".c", ".h", ".hpp",
-  ".java", ".rb", ".cs", ".yaml", ".yml", ".toml", ".json",
-  ".cfg", ".conf", ".ini", ".tf", ".sh", ".pem", ".crt", ".cer",
+  ".py",
+  ".js",
+  ".ts",
+  ".go",
+  ".rs",
+  ".cpp",
+  ".c",
+  ".h",
+  ".hpp",
+  ".java",
+  ".rb",
+  ".cs",
+  ".yaml",
+  ".yml",
+  ".toml",
+  ".json",
+  ".cfg",
+  ".conf",
+  ".ini",
+  ".tf",
+  ".sh",
+  ".pem",
+  ".crt",
+  ".cer",
 ]);
 
 export type ScanResult = {
@@ -36,6 +57,10 @@ export type ScanResult = {
     risk: string;
     asset: string;
     evidence: string;
+    detail: string;
+    service: string;
+    provenance: string;
+    confidence: string;
   }>;
 };
 
@@ -63,7 +88,10 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
   const isSingle = SINGLE_FILE_EXTS.has(ext);
 
   if (!isZip && !isSingle) {
-    return { ok: false, error: "Unsupported file type. Upload a ZIP or a source file." };
+    return {
+      ok: false,
+      error: "Unsupported file type. Upload a ZIP or a source file.",
+    };
   }
 
   const id = randomBytes(8).toString("hex");
@@ -86,23 +114,29 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
       for (const [filename, content] of Object.entries(extracted)) {
         if (filename.endsWith("/")) continue;
         const outPath = join(srcDir, filename);
-        await mkdir(outPath.substring(0, outPath.lastIndexOf("/")), { recursive: true }).catch(() => { });
+        await mkdir(outPath.substring(0, outPath.lastIndexOf("/")), {
+          recursive: true,
+        }).catch(() => {});
         await writeFile(outPath, content);
       }
     } else {
       await writeFile(join(srcDir, file.name), bytes);
     }
 
-    try { chmodSync(QSEARCH_BIN, 0o755); } catch { /* windows ok */ }
+    try {
+      chmodSync(QSEARCH_BIN, 0o755);
+    } catch {
+      /* windows ok */
+    }
 
     await execFileAsync(
       QSEARCH_BIN,
       ["scan", srcDir, "--out", outDir, "--quiet"],
-      { timeout: TIMEOUT }
+      { timeout: TIMEOUT },
     );
 
     const raw = JSON.parse(
-      await readFile(join(outDir, "findings.json"), "utf8")
+      await readFile(join(outDir, "findings.json"), "utf8"),
     );
 
     const findings = raw.findings ?? [];
@@ -110,28 +144,44 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
       ok: true,
       data: {
         files_scanned: raw.files_scanned ?? 0,
-        quantum_vulnerable: findings.filter((f: { classification: string }) => f.classification === "quantum-vulnerable").length,
-        high_risk: findings.filter((f: { risk: string }) => f.risk === "high").length,
-        pqc_ready: findings.filter((f: { classification: string }) => f.classification === "pqc-ready").length,
-        findings: findings.map((f: {
-          algorithm?: string;
-          classification?: string;
-          risk?: string;
-          asset?: string;
-          evidence?: string;
-        }) => ({
-          algorithm: f.algorithm ?? "",
-          classification: f.classification ?? "",
-          risk: f.risk ?? "",
-          asset: f.asset ?? "",
-          evidence: f.evidence ?? "",
-        })),
+        quantum_vulnerable: findings.filter(
+          (f: { classification: string }) =>
+            f.classification === "quantum-vulnerable",
+        ).length,
+        high_risk: findings.filter((f: { risk: string }) => f.risk === "high")
+          .length,
+        pqc_ready: findings.filter(
+          (f: { classification: string }) => f.classification === "pqc-ready",
+        ).length,
+        findings: findings.map(
+          (f: {
+            algorithm?: string;
+            classification?: string;
+            risk?: string;
+            asset?: string;
+            source_of_evidence?: string;
+            detail?: string;
+            cryptographic_service?: string;
+            provenance?: string;
+            confidence?: string;
+          }) => ({
+            algorithm: f.algorithm ?? "",
+            classification: f.classification ?? "",
+            risk: f.risk ?? "",
+            asset: f.asset ?? "",
+            evidence: f.source_of_evidence ?? "",
+            detail: f.detail ?? "",
+            service: f.cryptographic_service ?? "",
+            provenance: f.provenance ?? "",
+            confidence: f.confidence ?? "",
+          }),
+        ),
       },
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Scan failed.";
     return { ok: false, error: message };
   } finally {
-    await rm(tmp, { recursive: true, force: true }).catch(() => { });
+    await rm(tmp, { recursive: true, force: true }).catch(() => {});
   }
 }

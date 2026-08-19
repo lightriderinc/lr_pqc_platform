@@ -8,7 +8,7 @@ import SectionPanel from "@/components/ui/SectionPanel";
 import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
 import { useState } from "react";
-import { MdDownload, MdTravelExplore } from "react-icons/md";
+import { MdArrowBack, MdArrowForward, MdDownload, MdTravelExplore } from "react-icons/md";
 import type { ScanResult } from "./ScanConsole";
 
 const PAGE_SIZE = 50;
@@ -102,6 +102,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
       <SectionPanel
         title="Observed cryptography"
         action={<Badge>{result.findings.length} findings</Badge>}
+        cardStyle={
+          result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
+        }
       >
         {result.findings.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No findings.</p>
@@ -109,54 +112,62 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
           <TableShell
             columns={["Algorithm", "Classification", "Risk", "Asset"]}
           >
-            {paginated.map((f, i) => (
-              <tr
-                key={`${f.asset}-${f.evidence}-${i}`}
-                className="cursor-pointer transition-colors hover:bg-gray-50"
-                onClick={() => setActiveFinding(f)}
-              >
-                <td className="border-b border-gray-100 px-3 py-3 text-sm font-medium">
-                  {f.algorithm}
-                </td>
-                <td className="border-b border-gray-100 px-3 py-3">
-                  <Badge variant={classificationVariant(f.classification)}>
-                    {f.classification}
-                  </Badge>
-                </td>
-                <td className="border-b border-gray-100 px-3 py-3 text-sm text-gray-500">
-                  {f.risk}
-                </td>
-                <td className="border-b border-gray-100 px-3 py-3 font-mono text-xs text-gray-500 truncate max-w-xs">
-                  {f.asset}
-                </td>
-              </tr>
-            ))}
+            {paginated.map((f, i) => {
+              const isLast = i === paginated.length - 1;
+              const borderClass = isLast ? "" : "border-b border-gray-100";
+              return (
+                <tr
+                  key={`${f.asset}-${f.evidence}-${i}`}
+                  className="cursor-pointer transition-colors hover:bg-gray-50"
+                  onClick={() => setActiveFinding(f)}
+                >
+                  <td className={`${borderClass} px-4 py-3 text-sm`}>
+                    {f.algorithm}
+                  </td>
+                  <td className={`${borderClass} px-4 py-3`}>
+                    <Badge variant={classificationVariant(f.classification)}>
+                      {f.classification}
+                    </Badge>
+                  </td>
+                  <td
+                    className={`${borderClass} px-4  py-3 text-sm text-gray-500`}
+                  >
+                    {f.risk}
+                  </td>
+                  <td
+                    className={`${borderClass} px-4 py-3 font-mono text-xs text-gray-500 truncate max-w-xs`}
+                  >
+                    {f.asset}
+                  </td>
+                </tr>
+              );
+            })}
           </TableShell>
         )}
 
         {totalPages > 1 && (
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+          <div className="mt-3 flex items-center justify-between text-sm">
             <span>
               {start}–{end} of {result.findings.length} findings
             </span>
-            <div className="flex items-center gap-2">
-              <button
+            <div className="flex items-center gap-3">
+              <LRButton
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="default-radius border border-gray-200 px-2 py-1 disabled:opacity-30 hover:bg-gray-50"
+                variant="secondary-outline"
               >
-                ←
-              </button>
+                <MdArrowBack />
+              </LRButton>
               <span>
                 {page + 1} / {totalPages}
               </span>
-              <button
+              <LRButton
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page === totalPages - 1}
-                className="default-radius border border-gray-200 px-2 py-1 disabled:opacity-30 hover:bg-gray-50"
+                variant="secondary-outline"
               >
-                →
-              </button>
+                <MdArrowForward />
+              </LRButton>
             </div>
           </div>
         )}
@@ -177,21 +188,46 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         }
       >
         {activeFinding && (
-          <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3 text-sm">
-            {[
-              ["Algorithm", activeFinding.algorithm],
-              ["Classification", activeFinding.classification],
-              ["Risk", activeFinding.risk],
-              ["Asset", activeFinding.asset],
-              ["Evidence", activeFinding.evidence],
-            ].map(([label, value]) => (
-              <div key={label} className="contents">
-                <dt className="text-xs uppercase tracking-wide text-gray-400">
-                  {label}
-                </dt>
-                <dd className="m-0 break-all text-gray-700">{value || "—"}</dd>
-              </div>
-            ))}
+          <dl className="default-radius overflow-hidden text-sm">
+            {(
+              [
+                { label: "Algorithm", value: activeFinding.algorithm },
+                { label: "Service", value: activeFinding.service },
+                { label: "Classification", value: activeFinding.classification },
+                { label: "Risk", value: activeFinding.risk },
+                { label: "Confidence", value: activeFinding.confidence },
+                { label: "Provenance", value: activeFinding.provenance },
+                { label: "Asset", value: activeFinding.asset },
+                { label: "Evidence", value: activeFinding.evidence },
+                { label: "Detail", value: activeFinding.detail },
+              ] as const
+            )
+              .filter((row) => row.value)
+              .map((row, i, arr) => (
+                <div
+                  key={row.label}
+                  className={`grid grid-cols-[120px_1fr] gap-x-4 px-4 py-3 ${
+                    i === arr.length - 1 ? "" : "border-b-2 border-gray-50"
+                  }`}
+                >
+                  <dt className="text-xs flex items-center uppercase font-medium tracking-wide text-gray-400">
+                    {row.label}
+                  </dt>
+                  <dd className="break-all text-gray-700">
+                    {row.label === "Classification" ? (
+                      <Badge variant={classificationVariant(row.value)}>
+                        {row.value}
+                      </Badge>
+                    ) : row.label === "Asset" || row.label === "Evidence" ? (
+                      <span className="font-mono text-xs text-gray-500">
+                        {row.value}
+                      </span>
+                    ) : (
+                      row.value || "—"
+                    )}
+                  </dd>
+                </div>
+              ))}
           </dl>
         )}
       </Modal>
