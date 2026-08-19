@@ -82,7 +82,7 @@ export default function ScanConsole({
       {scanning && (
         <div
           aria-live="polite"
-          className="default-radius mt-5 flex items-center gap-4 border border-gray-100 bg-white p-5 text-sm text-gray-500"
+          className="default-radius mt-5 flex items-center gap-4 text-sm text-gray-500"
         >
           <span className="h-6 w-6 shrink-0 animate-spin rounded-full border-2 border-gray-200 border-t-[var(--brand-primary)]" />
           <span>Inspecting source and certificates…</span>

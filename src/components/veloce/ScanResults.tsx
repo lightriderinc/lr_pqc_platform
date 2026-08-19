@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { MdTravelExplore } from "react-icons/md";
-import SectionPanel from "@/components/ui/SectionPanel";
-import StatCard from "@/components/ui/StatCard";
 import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
 import LRButton from "@/components/ui/LRButton";
 import Modal from "@/components/ui/Modal";
-import EmptyState from "@/components/ui/EmptyState";
+import SectionPanel from "@/components/ui/SectionPanel";
+import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
+import { useState } from "react";
+import { MdDownload, MdTravelExplore } from "react-icons/md";
 import type { ScanResult } from "./ScanConsole";
 
 const PAGE_SIZE = 50;
@@ -20,12 +20,14 @@ function classificationVariant(c: string) {
 }
 
 export default function ScanResults({ result }: { result: ScanResult | null }) {
-  const [activeFinding, setActiveFinding] = useState<ScanResult["findings"][0] | null>(null);
+  const [activeFinding, setActiveFinding] = useState<
+    ScanResult["findings"][0] | null
+  >(null);
   const [page, setPage] = useState(0);
 
   if (!result) {
     return (
-      <div className="mt-7">
+      <div className="mt-6">
         <EmptyState
           icon={<MdTravelExplore />}
           title="Upload a file or ZIP to see results"
@@ -36,7 +38,10 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
   }
 
   const totalPages = Math.ceil(result.findings.length / PAGE_SIZE);
-  const paginated = result.findings.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const paginated = result.findings.slice(
+    page * PAGE_SIZE,
+    (page + 1) * PAGE_SIZE,
+  );
   const start = page * PAGE_SIZE + 1;
   const end = Math.min((page + 1) * PAGE_SIZE, result.findings.length);
 
@@ -53,8 +58,8 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
   }
 
   return (
-    <div className="mt-7 grid gap-5">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="mt-4 grid gap-5">
+      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Files scanned"
           value={String(result.files_scanned)}
@@ -80,21 +85,19 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         />
       </div>
 
-      <SectionPanel
-        title="Export results"
-        action={
-          <span className="text-2xs text-gray-400">
-            Scan completed · {new Date().toLocaleDateString()}
-          </span>
-        }
-      >
-        <button
+      <div className="-mt-4 mb-3 flex items-start justify-between gap-4">
+        <span className="text-md font-medium text-gray-400">
+          Scan completed · {new Date().toLocaleDateString()}
+        </span>
+        <LRButton
+          variant="secondary-outline"
+          icon={<MdDownload className="text-lg" />}
           onClick={downloadFindings}
           className="default-radius border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
         >
           Download findings.json
-        </button>
-      </SectionPanel>
+        </LRButton>
+      </div>
 
       <SectionPanel
         title="Observed cryptography"
@@ -103,7 +106,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         {result.findings.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No findings.</p>
         ) : (
-          <TableShell columns={["Algorithm", "Classification", "Risk", "Asset"]}>
+          <TableShell
+            columns={["Algorithm", "Classification", "Risk", "Asset"]}
+          >
             {paginated.map((f, i) => (
               <tr
                 key={`${f.asset}-${f.evidence}-${i}`}
@@ -131,7 +136,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
 
         {totalPages > 1 && (
           <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
-            <span>{start}–{end} of {result.findings.length} findings</span>
+            <span>
+              {start}–{end} of {result.findings.length} findings
+            </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
@@ -140,7 +147,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
               >
                 ←
               </button>
-              <span>{page + 1} / {totalPages}</span>
+              <span>
+                {page + 1} / {totalPages}
+              </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page === totalPages - 1}
@@ -159,7 +168,10 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         eyebrow="Finding"
         title={activeFinding?.algorithm ?? "Finding details"}
         footer={
-          <LRButton variant="secondary-outline" onClick={() => setActiveFinding(null)}>
+          <LRButton
+            variant="secondary-outline"
+            onClick={() => setActiveFinding(null)}
+          >
             Close
           </LRButton>
         }
@@ -174,7 +186,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
               ["Evidence", activeFinding.evidence],
             ].map(([label, value]) => (
               <div key={label} className="contents">
-                <dt className="text-xs uppercase tracking-wide text-gray-400">{label}</dt>
+                <dt className="text-xs uppercase tracking-wide text-gray-400">
+                  {label}
+                </dt>
                 <dd className="m-0 break-all text-gray-700">{value || "—"}</dd>
               </div>
             ))}
