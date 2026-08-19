@@ -184,21 +184,49 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         }
       >
         {activeFinding && (
-          <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3 text-sm">
-            {[
-              ["Algorithm", activeFinding.algorithm],
-              ["Classification", activeFinding.classification],
-              ["Risk", activeFinding.risk],
-              ["Asset", activeFinding.asset],
-              ["Evidence", activeFinding.evidence],
-            ].map(([label, value]) => (
-              <div key={label} className="contents">
-                <dt className="text-xs uppercase tracking-wide text-gray-400">
-                  {label}
-                </dt>
-                <dd className="m-0 break-all text-gray-700">{value || "—"}</dd>
-              </div>
-            ))}
+          <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-3">
+            <div className="contents">
+              <dt className="text-xs uppercase tracking-wide text-gray-400">
+                Algorithm
+              </dt>
+              <dd className="m-0 text-sm text-gray-700">
+                {activeFinding.algorithm || "—"}
+              </dd>
+            </div>
+            <div className="contents">
+              <dt className="text-xs uppercase tracking-wide text-gray-400">
+                Classification
+              </dt>
+              <dd className="m-0">
+                <Badge variant={classificationVariant(activeFinding.classification)}>
+                  {activeFinding.classification}
+                </Badge>
+              </dd>
+            </div>
+            <div className="contents">
+              <dt className="text-xs uppercase tracking-wide text-gray-400">
+                Risk
+              </dt>
+              <dd className="m-0 text-sm text-gray-500">
+                {activeFinding.risk || "—"}
+              </dd>
+            </div>
+            <div className="contents">
+              <dt className="text-xs uppercase tracking-wide text-gray-400">
+                Asset
+              </dt>
+              <dd className="m-0 break-all font-mono text-xs text-gray-500">
+                {activeFinding.asset || "—"}
+              </dd>
+            </div>
+            <div className="contents">
+              <dt className="text-xs uppercase tracking-wide text-gray-400">
+                Evidence
+              </dt>
+              <dd className="m-0 break-all font-mono text-xs text-gray-500">
+                {activeFinding.evidence || "—"}
+              </dd>
+            </div>
           </dl>
         )}
       </Modal>
