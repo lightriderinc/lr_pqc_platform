@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.0.1...v1.0.2) (2026-08-19)
+
+
+### Bug Fixes
+
+* added OG image ([faff62e](https://github.com/lightriderinc/lr_pqc_platform/commit/faff62e70614462a8c30c60efe341b2cb0ae3d96))
+
 ## [1.0.1](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.0.0...v1.0.1) (2026-08-19)
 
 
