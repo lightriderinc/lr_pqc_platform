@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.0.2...v1.0.3) (2026-08-19)
+
+
+### Bug Fixes
+
+* replace unzipper with fflate for zero-dependency ZIP extraction ([2128971](https://github.com/lightriderinc/lr_pqc_platform/commit/2128971fc994fad9a6d5270fb2b3b35ad6d1e02b))
+
 ## [1.0.2](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.0.1...v1.0.2) (2026-08-19)
 
 
