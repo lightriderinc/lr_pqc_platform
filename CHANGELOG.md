@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.0.3...v1.1.0) (2026-08-19)
+
+
+### Bug Fixes
+
+* result modal styles updated ([ed96160](https://github.com/lightriderinc/lr_pqc_platform/commit/ed96160ed886637bf1564ead0e8a3054932eed5e))
+
+
+### Features
+
+* add evidence line number and detail to findings modal ([f26f6c4](https://github.com/lightriderinc/lr_pqc_platform/commit/f26f6c4f524cb26597ea4a70a3af54c19438963f))
+
 ## [1.0.3](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.0.2...v1.0.3) (2026-08-19)
 
 
