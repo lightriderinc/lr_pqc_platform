@@ -7,7 +7,14 @@ import SectionPanel from "@/components/ui/SectionPanel";
 import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
 import { useState } from "react";
-import { MdArrowBack, MdArrowForward, MdDownload } from "react-icons/md";
+import {
+  MdArrowBack,
+  MdArrowForward,
+  MdDangerous,
+  MdDownload,
+  MdOutlineWarning,
+  MdShield,
+} from "react-icons/md";
 import type { ScanResult } from "./ScanConsole";
 
 const PAGE_SIZE = 50;
@@ -55,7 +62,8 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         action={
           <Badge>
             {" "}
-            Scan completed · {new Date().toLocaleDateString()}{" . "}
+            Scan completed · {new Date().toLocaleDateString()}
+            {" . "}
             {new Date().toLocaleTimeString()}
           </Badge>
         }
@@ -73,19 +81,22 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
             label="Quantum-vulnerable"
             value={String(result.quantum_vulnerable)}
             sub="Prioritize migration"
-            accent={result.quantum_vulnerable > 0 ? "bad" : "good"}
+            accent={result.quantum_vulnerable > 0 ? "bad" : "neutral"}
+            icon={<MdDangerous />}
           />
           <StatCard
             label="High risk"
             value={String(result.high_risk)}
             sub="High-priority findings"
             accent={result.high_risk > 0 ? "warn" : "neutral"}
+            icon={<MdOutlineWarning />}
           />
           <StatCard
             label="PQC-ready"
             value={String(result.pqc_ready)}
             sub="Post-quantum usage"
-            accent={result.pqc_ready > 0 ? "good" : "neutral"}
+            accent={result.quantum_vulnerable === 0 && result.high_risk === 0 && result.pqc_ready > 0 ? "good" : "neutral"}
+            icon={<MdShield />}
           />
         </div>
         <div className="flex w-full flex-row justify-end">
