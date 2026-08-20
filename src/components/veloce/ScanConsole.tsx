@@ -3,32 +3,31 @@
 import type { ScanResult } from "@/app/qsearch/actions";
 import { runQSearch } from "@/app/qsearch/actions";
 import LRButton from "@/components/ui/LRButton";
-import type { DragEvent } from "react";
-import { useRef, useState } from "react";
-import { ImUpload3 } from "react-icons/im";
-import { MdSearch } from "react-icons/md";
+import { useState } from "react";
+import { MdRefresh, MdSearch } from "react-icons/md";
+import FileDropzone from "./FileDropzone";
+import UploadedFileCard from "./UploadedFileCard";
 
 export type { ScanResult };
 
+const ACCEPTED_FILE_TYPES =
+  ".zip,.py,.js,.ts,.go,.rs,.cpp,.c,.h,.hpp,.java,.rb,.cs,.yaml,.yml,.toml,.json,.cfg,.conf,.pem,.crt,.cer,application/zip";
+
 export default function ScanConsole({
   onResult,
+  onReset,
 }: {
   onResult: (result: ScanResult) => void;
+  onReset?: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dragActive, setDragActive] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [completed, setCompleted] = useState(false);
 
-  function handleDrop(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault();
-    setDragActive(false);
-    const dropped = e.dataTransfer.files?.[0] ?? null;
-    if (dropped) {
-      setFile(dropped);
-      setError(null);
-    }
+  function handleFileSelected(selected: File) {
+    setFile(selected);
+    setError(null);
   }
 
   async function startScan() {
@@ -44,88 +43,65 @@ export default function ScanConsole({
     if (!result.ok) {
       setError(result.error);
     } else {
+      setCompleted(true);
       onResult(result.data);
     }
     setScanning(false);
   }
 
+  function startNewSession() {
+    setFile(null);
+    setError(null);
+    setCompleted(false);
+    onReset?.();
+  }
+
   return (
-    <div className="default-radius bg-gray-50 p-4">
-      <label className="block text-lg font-semibold text-gray-700 mb-4">
-        Upload a file to scan for vulnerabilities
-      </label>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            inputRef.current?.click();
-          }
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragActive(true);
-        }}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          setDragActive(true);
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          setDragActive(false);
-        }}
-        onDrop={handleDrop}
-        className={`default-radius cursor-pointer border border-dashed px-4 py-10 text-center transition-colors ${
-          dragActive
-            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
-            : "border-gray-200 bg-white hover:border-[var(--brand-primary-light)] hover:bg-[var(--brand-primary)]/5"
-        }`}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".zip,.py,.js,.ts,.go,.rs,.cpp,.c,.h,.hpp,.java,.rb,.cs,.yaml,.yml,.toml,.json,.cfg,.conf,.pem,.crt,.cer,application/zip"
-          className="hidden"
-          onChange={(e) => {
-            setFile(e.target.files?.[0] ?? null);
-            setError(null);
-          }}
+    <div className={`default-radius ${completed ? "border-2 border-gray-50" : "bg-gray-50"} p-4`}>
+      {completed && file ? (
+        <label className="block text-lg font-semibold text-gray-600 mb-4">
+          Uploaded file
+        </label>
+      ) : (
+        <label className="block text-lg font-semibold text-gray-600 mb-4">
+          Upload a file to scan for vulnerabilities
+        </label>
+      )}
+
+      {completed && file ? (
+        <UploadedFileCard file={file} onRemove={startNewSession} />
+      ) : (
+        <FileDropzone
+          accept={ACCEPTED_FILE_TYPES}
+          fileName={file?.name}
+          onFileSelected={handleFileSelected}
         />
-        <div
-          className={`mb-3 flex justify-center text-3xl transition-colors ${
-            dragActive ? "text-[var(--brand-primary)]" : "text-gray-300"
-          }`}
-        >
-          <ImUpload3 />
-        </div>
-        {file ? (
-          <p className="text-sm font-medium text-gray-700">{file.name}</p>
-        ) : (
-          <p className="text-sm text-gray-500">
-            <span className="color-brand-primary font-medium">
-              Click to browse
-            </span>{" "}
-            or drag and drop your file here.
-          </p>
-        )}
-      </div>
+      )}
 
       <div className="mt-4 flex gap-4 justify-between">
-        <p className="text-xs text-gray-300">
-          Supported file types: .zip, .py, .js, .ts, .go, .rs, .cpp, .c, .h,
-          .hpp, .java, .rb, .cs, .yaml, .yml, .toml, .json, .cfg, .conf, .pem,
-          .crt, .cer
+        <p className="text-xs text-gray-400">
+          {completed
+            ? "Remove the file above to upload a different one, or start a new session."
+            : "Supported file types: .zip, .py, .js, .ts, .go, .rs, .cpp, .c, .h, .hpp, .java, .rb, .cs, .yaml, .yml, .toml, .json, .cfg, .conf, .pem, .crt, .cer"}
         </p>
-        <LRButton
-          variant="primary"
-          icon={<MdSearch className="text-lg" />}
-          onClick={startScan}
-          disabled={!file || scanning}
-        >
-          {scanning ? "Scanning…" : "Start qSearch"}
-        </LRButton>
+        {completed ? (
+          <LRButton
+            variant="secondary"
+            icon={<MdRefresh className="text-lg" />}
+            onClick={startNewSession}
+          >
+            Start new session
+          </LRButton>
+        ) : (
+          <LRButton
+            variant="primary"
+            icon={<MdSearch className="text-lg" />}
+            onClick={startScan}
+            disabled={!file || scanning}
+          >
+            {scanning ? "Scanning…" : "Start qSearch"}
+          </LRButton>
+        )}
       </div>
 
       {scanning && (

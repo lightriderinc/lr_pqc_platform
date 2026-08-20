@@ -22,7 +22,7 @@ export default function SectionPanel({
   return (
     <section className={`flex h-full flex-col ${className}`}>
       <div className="mb-4 flex items-end justify-between gap-4">
-        <span className="text-xl font-bold text-gray-600">{title}</span>
+        <h2 className="text-xl font-bold text-gray-600">{title}</h2>
         {action}
       </div>
       <div
