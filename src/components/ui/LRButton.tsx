@@ -66,7 +66,7 @@ const LRButton = forwardRef<HTMLButtonElement, LRButtonProps>(function LRButton(
       {icon && iconPosition === "left" && (
         <span className="inline-flex shrink-0 items-center">{icon}</span>
       )}
-      {children}
+      {children && <span className="whitespace-nowrap">{children}</span>}
       {icon && iconPosition === "right" && (
         <span className="inline-flex shrink-0 items-center">{icon}</span>
       )}

@@ -5,7 +5,8 @@ import { runQSearch } from "@/app/qsearch/actions";
 import LRButton from "@/components/ui/LRButton";
 import type { DragEvent } from "react";
 import { useRef, useState } from "react";
-import { MdSearch, MdUploadFile } from "react-icons/md";
+import { ImUpload3 } from "react-icons/im";
+import { MdSearch } from "react-icons/md";
 
 export type { ScanResult };
 
@@ -50,7 +51,9 @@ export default function ScanConsole({
 
   return (
     <div className="default-radius bg-gray-50 p-4">
-      <label className="block text-lg font-semibold text-gray-700 mb-4">Upload a file to scan for vulnerabilities</label>
+      <label className="block text-lg font-semibold text-gray-700 mb-4">
+        Upload a file to scan for vulnerabilities
+      </label>
       <div
         role="button"
         tabIndex={0}
@@ -95,21 +98,26 @@ export default function ScanConsole({
             dragActive ? "text-[var(--brand-primary)]" : "text-gray-300"
           }`}
         >
-          <MdUploadFile />
+          <ImUpload3 />
         </div>
         {file ? (
           <p className="text-sm font-medium text-gray-700">{file.name}</p>
         ) : (
           <p className="text-sm text-gray-500">
-            <span className="color-brand-primary font-medium">Click to browse</span> or drag and drop your file here.
+            <span className="color-brand-primary font-medium">
+              Click to browse
+            </span>{" "}
+            or drag and drop your file here.
           </p>
         )}
-        <p className="mx-auto mt-1 max-w-md text-xs text-gray-300">
-          Supported file types: .zip, .py, .js, .ts, .go, .rs, .cpp, .c, .h, .hpp, .java, .rb, .cs, .yaml, .yml, .toml, .json, .cfg, .conf, .pem, .crt, .cer
-        </p>
       </div>
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex gap-4 justify-between">
+        <p className="text-xs text-gray-300">
+          Supported file types: .zip, .py, .js, .ts, .go, .rs, .cpp, .c, .h,
+          .hpp, .java, .rb, .cs, .yaml, .yml, .toml, .json, .cfg, .conf, .pem,
+          .crt, .cer
+        </p>
         <LRButton
           variant="primary"
           icon={<MdSearch className="text-lg" />}
