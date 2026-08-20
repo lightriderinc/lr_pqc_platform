@@ -3,14 +3,16 @@
 import type { DragEvent } from "react";
 import { useRef, useState } from "react";
 import { ImUpload3 } from "react-icons/im";
+import { MdInsertDriveFile } from "react-icons/md";
+import { formatFileSize } from "./UploadedFileCard";
 
 export default function FileDropzone({
   accept,
-  fileName,
+  file,
   onFileSelected,
 }: {
   accept: string;
-  fileName?: string | null;
+  file?: File | null;
   onFileSelected: (file: File) => void;
 }) {
   const [dragActive, setDragActive] = useState(false);
@@ -68,10 +70,13 @@ export default function FileDropzone({
           dragActive ? "text-[var(--brand-primary)]" : "text-gray-300"
         }`}
       >
-        <ImUpload3 />
+        {file ? <MdInsertDriveFile /> : <ImUpload3 />}
       </div>
-      {fileName ? (
-        <p className="text-sm font-medium text-gray-700">{fileName}</p>
+      {file ? (
+        <>
+          <p className="text-sm font-medium text-gray-700">{file.name}</p>
+          <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+        </>
       ) : (
         <p className="text-sm text-gray-500">
           <span className="color-brand-primary font-medium">Click to browse</span>{" "}

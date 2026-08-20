@@ -73,7 +73,7 @@ export default function ScanConsole({
       ) : (
         <FileDropzone
           accept={ACCEPTED_FILE_TYPES}
-          fileName={file?.name}
+          file={file}
           onFileSelected={handleFileSelected}
         />
       )}
@@ -99,7 +99,7 @@ export default function ScanConsole({
             onClick={startScan}
             disabled={!file || scanning}
           >
-            {scanning ? "Scanning…" : "Start qSearch"}
+            {scanning ? "Scanning…" : "Upload & start qSearch"}
           </LRButton>
         )}
       </div>
