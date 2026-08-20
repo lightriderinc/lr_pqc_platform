@@ -59,7 +59,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
           result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
         }
       >
-        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
             label="Files scanned"
             value={String(result.files_scanned)}
@@ -107,6 +107,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         ) : (
           <TableShell
             columns={["Algorithm", "Classification", "Risk", "Asset"]}
+            columnWidths={["w-1/6", "w-1/6", "w-1/6", "w-1/2"]}
           >
             {paginated.map((f, i) => {
               const isLast = i === paginated.length - 1;
@@ -117,7 +118,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                   className="cursor-pointer transition-colors hover:bg-gray-50"
                   onClick={() => setActiveFinding(f)}
                 >
-                  <td className={`${borderClass} px-4 py-3 text-sm`}>
+                  <td className={`${borderClass} px-4 py-3 text-sm truncate`}>
                     {f.algorithm}
                   </td>
                   <td className={`${borderClass} px-4 py-3`}>
@@ -131,7 +132,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                     {f.risk}
                   </td>
                   <td
-                    className={`${borderClass} px-4 py-3 font-mono text-xs text-gray-500 truncate max-w-xs`}
+                    className={`${borderClass} px-4 py-3 font-mono text-xs text-gray-500 truncate`}
                   >
                     {f.asset}
                   </td>
