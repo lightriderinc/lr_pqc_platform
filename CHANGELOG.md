@@ -1,3 +1,21 @@
+## [1.1.1](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.1.0...v1.1.1) (2026-08-20)
+
+
+### Bug Fixes
+
+* build identity fields styles ([ba7c6a1](https://github.com/lightriderinc/lr_pqc_platform/commit/ba7c6a1fe3dc520b80a7fdf56c9a22f4ed0beeac))
+* completed time fixed ([ce2c411](https://github.com/lightriderinc/lr_pqc_platform/commit/ce2c4119dfc4f14260d81fa49f26e6692e973d8c))
+* drafted unwired dashboard page ([b2fcb9d](https://github.com/lightriderinc/lr_pqc_platform/commit/b2fcb9da3580edc2c0e02d18cfc2320b870e66eb))
+* invisible pages now drafted ([e24e7a2](https://github.com/lightriderinc/lr_pqc_platform/commit/e24e7a228e2994cb9bf9f2256dcf120b6600adfb))
+* responsive results ([9e62451](https://github.com/lightriderinc/lr_pqc_platform/commit/9e62451e16273bbee0ff5b390e90e32c4326cc84))
+* responsive table ([b69b5d8](https://github.com/lightriderinc/lr_pqc_platform/commit/b69b5d8026e9a414d6d72184b35c97708b336e61))
+* summary stats updated ([4b36731](https://github.com/lightriderinc/lr_pqc_platform/commit/4b36731b7e0a1eab2b92f929507cebfc9348719a))
+* table sort options ([afbbaf3](https://github.com/lightriderinc/lr_pqc_platform/commit/afbbaf3646d77ef6792bfedf6deeee1cfb3d3c62))
+* updated navigation + redirect to qSearch ([b5ca3e9](https://github.com/lightriderinc/lr_pqc_platform/commit/b5ca3e978df53b29d4bd6e437d3f83dfad5183ea))
+* updated results structure ([87493f3](https://github.com/lightriderinc/lr_pqc_platform/commit/87493f3702d277bc35d63b564d7fee7639968a15))
+* updated scan console ([72c6a5a](https://github.com/lightriderinc/lr_pqc_platform/commit/72c6a5ad66048724da46f63f78adf5f9270b99e8))
+* upload interactions ([a4a32e0](https://github.com/lightriderinc/lr_pqc_platform/commit/a4a32e0dac9a0475385fc22af4431336e6510cb4))
+
 # [1.1.0](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.0.3...v1.1.0) (2026-08-19)
 
 
