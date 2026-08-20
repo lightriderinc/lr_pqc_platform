@@ -20,13 +20,13 @@ export default function SectionPanel({
   cardStyle?: string;
 }) {
   return (
-    <section className={`flex h-full flex-col ${className}`}>
+    <section className={`flex h-full min-w-0 flex-col ${className}`}>
       <div className="mb-4 flex items-end justify-between gap-4">
         <h2 className="text-xl font-bold text-gray-600">{title}</h2>
         {action}
       </div>
       <div
-        className={`default-radius flex-1 ${cardStyle} ${bodyClassName}`}
+        className={`default-radius min-w-0 flex-1 ${cardStyle} ${bodyClassName}`}
       >
         {children}
       </div>

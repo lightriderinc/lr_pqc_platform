@@ -16,7 +16,7 @@ export default function TableShell({
 }) {
   return (
     <div className="default-radius max-h-[480px] overflow-auto border border-gray-50 bg-white">
-      <table className="w-full table-fixed border-collapse text-sm">
+      <table className="w-full min-w-[640px] border-collapse text-sm">
         <thead>
           <tr>
             {columns.map((col, i) => (

@@ -107,7 +107,12 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         ) : (
           <TableShell
             columns={["Algorithm", "Classification", "Risk", "Asset"]}
-            columnWidths={["w-1/6", "w-1/6", "w-1/6", "w-1/2"]}
+            columnWidths={[
+              "min-w-[140px]",
+              "min-w-[160px]",
+              "min-w-[110px]",
+              "min-w-[220px]",
+            ]}
           >
             {paginated.map((f, i) => {
               const isLast = i === paginated.length - 1;
@@ -118,7 +123,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                   className="cursor-pointer transition-colors hover:bg-gray-50"
                   onClick={() => setActiveFinding(f)}
                 >
-                  <td className={`${borderClass} px-4 py-3 text-sm truncate`}>
+                  <td
+                    className={`${borderClass} px-4 py-3 text-sm whitespace-nowrap`}
+                  >
                     {f.algorithm}
                   </td>
                   <td className={`${borderClass} px-4 py-3`}>
@@ -132,7 +139,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                     {f.risk}
                   </td>
                   <td
-                    className={`${borderClass} px-4 py-3 font-mono text-xs text-gray-500 truncate`}
+                    className={`${borderClass} px-4 py-3 font-mono text-xs text-gray-500 truncate max-w-[320px]`}
                   >
                     {f.asset}
                   </td>
