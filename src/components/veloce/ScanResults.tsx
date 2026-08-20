@@ -1,17 +1,44 @@
 "use client";
 
 import Badge from "@/components/ui/Badge";
-import EmptyState from "@/components/ui/EmptyState";
 import LRButton from "@/components/ui/LRButton";
 import Modal from "@/components/ui/Modal";
 import SectionPanel from "@/components/ui/SectionPanel";
 import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
-import { useState } from "react";
-import { MdArrowBack, MdArrowForward, MdDownload, MdTravelExplore } from "react-icons/md";
+import { useMemo, useState } from "react";
+import {
+  MdArrowBack,
+  MdArrowDownward,
+  MdArrowForward,
+  MdArrowUpward,
+  MdDangerous,
+  MdDownload,
+  MdOutlineWarning,
+  MdShield,
+  MdUnfoldMore,
+} from "react-icons/md";
 import type { ScanResult } from "./ScanConsole";
 
 const PAGE_SIZE = 50;
+
+type SortKey = "classification" | "risk";
+type SortDir = "asc" | "desc";
+
+const CLASSIFICATION_ORDER: Record<string, number> = {
+  "quantum-vulnerable": 0,
+  "pqc-ready": 1,
+};
+
+const RISK_ORDER: Record<string, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+function rankOf(order: Record<string, number>, value: string) {
+  return value in order ? order[value] : Object.keys(order).length;
+}
 
 function classificationVariant(c: string) {
   if (c === "quantum-vulnerable") return "vulnerable" as const;
@@ -19,31 +46,81 @@ function classificationVariant(c: string) {
   return "context" as const;
 }
 
+function SortableHeader({
+  label,
+  sortKeyName,
+  activeKey,
+  dir,
+  onSort,
+}: {
+  label: string;
+  sortKeyName: SortKey;
+  activeKey: SortKey | null;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+}) {
+  const isActive = activeKey === sortKeyName;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(sortKeyName)}
+      className="flex items-center gap-1 font-medium text-gray-700 hover:text-gray-900"
+    >
+      {label}
+      {!isActive ? (
+        <MdUnfoldMore className="text-gray-300" />
+      ) : dir === "asc" ? (
+        <MdArrowUpward />
+      ) : (
+        <MdArrowDownward />
+      )}
+    </button>
+  );
+}
+
 export default function ScanResults({ result }: { result: ScanResult | null }) {
   const [activeFinding, setActiveFinding] = useState<
     ScanResult["findings"][0] | null
   >(null);
   const [page, setPage] = useState(0);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const completedAt = useMemo(() => new Date(), [result]);
+
+  const sortedFindings = useMemo(() => {
+    if (!result || !sortKey) return result?.findings ?? [];
+    const order = sortKey === "classification" ? CLASSIFICATION_ORDER : RISK_ORDER;
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...result.findings].sort(
+      (a, b) => dir * (rankOf(order, a[sortKey]) - rankOf(order, b[sortKey])),
+    );
+  }, [result, sortKey, sortDir]);
 
   if (!result) {
-    return (
-      <div className="mt-6">
-        <EmptyState
-          icon={<MdTravelExplore />}
-          title="Upload a file or ZIP to see results"
-          description="Choose a source file or ZIP archive above and run qSearch to discover quantum-vulnerable cryptography. Findings and exportable reports will appear here."
-        />
-      </div>
-    );
+    return <></>;
   }
 
-  const totalPages = Math.ceil(result.findings.length / PAGE_SIZE);
-  const paginated = result.findings.slice(
+  function toggleSort(key: SortKey) {
+    setPage(0);
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir("asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+    } else {
+      setSortKey(null);
+      setSortDir("asc");
+    }
+  }
+
+  const totalPages = Math.ceil(sortedFindings.length / PAGE_SIZE);
+  const paginated = sortedFindings.slice(
     page * PAGE_SIZE,
     (page + 1) * PAGE_SIZE,
   );
   const start = page * PAGE_SIZE + 1;
-  const end = Math.min((page + 1) * PAGE_SIZE, result.findings.length);
+  const end = Math.min((page + 1) * PAGE_SIZE, sortedFindings.length);
 
   function downloadFindings() {
     const blob = new Blob([JSON.stringify(result, null, 2)], {
@@ -59,45 +136,58 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
 
   return (
     <div className="mt-4 grid gap-5">
-      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Files scanned"
-          value={String(result.files_scanned)}
-          sub="Readable source & certs"
-        />
-        <StatCard
-          label="Quantum-vulnerable"
-          value={String(result.quantum_vulnerable)}
-          sub="Prioritize migration"
-          accent={result.quantum_vulnerable > 0 ? "bad" : "good"}
-        />
-        <StatCard
-          label="High risk"
-          value={String(result.high_risk)}
-          sub="High-priority findings"
-          accent={result.high_risk > 0 ? "warn" : "neutral"}
-        />
-        <StatCard
-          label="PQC-ready"
-          value={String(result.pqc_ready)}
-          sub="Post-quantum usage"
-          accent={result.pqc_ready > 0 ? "good" : "neutral"}
-        />
-      </div>
-
-      <div className="-mt-4 mb-3 flex items-start justify-between gap-4">
-        <span className="text-md font-medium text-gray-400">
-          Scan completed · {new Date().toLocaleDateString()}
-        </span>
-        <LRButton
-          variant="secondary-outline"
-          icon={<MdDownload className="text-lg" />}
-          onClick={downloadFindings}
-          className="default-radius border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
-        >
-          Download findings.json
-        </LRButton>
-      </div>
+      <SectionPanel
+        title="Findings summary"
+        action={
+          <Badge>
+            {" "}
+            Scan completed · {completedAt.toLocaleDateString()}
+            {" . "}
+            {completedAt.toLocaleTimeString()}
+          </Badge>
+        }
+        cardStyle={
+          result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
+        }
+      >
+        <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            label="Files scanned"
+            value={String(result.files_scanned)}
+            sub="Readable source & certs"
+          />
+          <StatCard
+            label="Quantum-vulnerable"
+            value={String(result.quantum_vulnerable)}
+            sub="Prioritize migration"
+            accent={result.quantum_vulnerable > 0 ? "bad" : "neutral"}
+            icon={<MdDangerous />}
+          />
+          <StatCard
+            label="High risk"
+            value={String(result.high_risk)}
+            sub="High-priority findings"
+            accent={result.high_risk > 0 ? "warn" : "neutral"}
+            icon={<MdOutlineWarning />}
+          />
+          <StatCard
+            label="PQC-ready"
+            value={String(result.pqc_ready)}
+            sub="Post-quantum usage"
+            accent={result.quantum_vulnerable === 0 && result.high_risk === 0 && result.pqc_ready > 0 ? "good" : "neutral"}
+            icon={<MdShield />}
+          />
+        </div>
+        <div className="flex w-full flex-row justify-end">
+          <LRButton
+            variant="secondary-outline"
+            icon={<MdDownload className="text-lg" />}
+            onClick={downloadFindings}
+          >
+            Download findings.json
+          </LRButton>
+        </div>
+      </SectionPanel>
 
       <SectionPanel
         title="Observed cryptography"
@@ -110,7 +200,32 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
           <p className="py-6 text-center text-sm text-gray-400">No findings.</p>
         ) : (
           <TableShell
-            columns={["Algorithm", "Classification", "Risk", "Asset"]}
+            columns={[
+              "Algorithm",
+              <SortableHeader
+                key="classification"
+                label="Classification"
+                sortKeyName="classification"
+                activeKey={sortKey}
+                dir={sortDir}
+                onSort={toggleSort}
+              />,
+              <SortableHeader
+                key="risk"
+                label="Risk"
+                sortKeyName="risk"
+                activeKey={sortKey}
+                dir={sortDir}
+                onSort={toggleSort}
+              />,
+              "Asset",
+            ]}
+            columnWidths={[
+              "min-w-[140px]",
+              "min-w-[160px]",
+              "min-w-[110px]",
+              "min-w-[220px]",
+            ]}
           >
             {paginated.map((f, i) => {
               const isLast = i === paginated.length - 1;
@@ -121,7 +236,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                   className="cursor-pointer transition-colors hover:bg-gray-50"
                   onClick={() => setActiveFinding(f)}
                 >
-                  <td className={`${borderClass} px-4 py-3 text-sm`}>
+                  <td
+                    className={`${borderClass} px-4 py-3 text-sm whitespace-nowrap`}
+                  >
                     {f.algorithm}
                   </td>
                   <td className={`${borderClass} px-4 py-3`}>
@@ -135,7 +252,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                     {f.risk}
                   </td>
                   <td
-                    className={`${borderClass} px-4 py-3 font-mono text-xs text-gray-500 truncate max-w-xs`}
+                    className={`${borderClass} px-4 py-3 font-mono text-xs text-gray-500 truncate max-w-[320px]`}
                   >
                     {f.asset}
                   </td>
@@ -193,7 +310,10 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
               [
                 { label: "Algorithm", value: activeFinding.algorithm },
                 { label: "Service", value: activeFinding.service },
-                { label: "Classification", value: activeFinding.classification },
+                {
+                  label: "Classification",
+                  value: activeFinding.classification,
+                },
                 { label: "Risk", value: activeFinding.risk },
                 { label: "Confidence", value: activeFinding.confidence },
                 { label: "Provenance", value: activeFinding.provenance },

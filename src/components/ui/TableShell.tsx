@@ -5,22 +5,24 @@ import type { ReactNode } from "react";
 // worth of <tr>) once data is wired in.
 export default function TableShell({
   columns,
+  columnWidths,
   children,
   emptyLabel = "No data yet — connect qSearch to populate findings.",
 }: {
-  columns: string[];
+  columns: ReactNode[];
+  columnWidths?: string[];
   children?: ReactNode;
   emptyLabel?: string;
 }) {
   return (
     <div className="default-radius max-h-[480px] overflow-auto border border-gray-50 bg-white">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full min-w-[640px] border-collapse text-sm">
         <thead>
           <tr>
-            {columns.map((col) => (
+            {columns.map((col, i) => (
               <th
-                key={col}
-                className="sticky top-0 border-b border-gray-100 bg-gray-50 px-4 py-2 text-left font-medium text-gray-700"
+                key={i}
+                className={`sticky top-0 border-b border-gray-100 bg-gray-50 px-4 py-2 text-left font-medium text-gray-700 truncate ${columnWidths?.[i] ?? ""}`}
               >
                 {col}
               </th>

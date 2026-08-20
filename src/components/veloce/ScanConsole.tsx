@@ -3,20 +3,32 @@
 import type { ScanResult } from "@/app/qsearch/actions";
 import { runQSearch } from "@/app/qsearch/actions";
 import LRButton from "@/components/ui/LRButton";
-import { useRef, useState } from "react";
-import { MdSearch, MdUploadFile } from "react-icons/md";
+import { useState } from "react";
+import { MdRefresh, MdSearch } from "react-icons/md";
+import FileDropzone from "./FileDropzone";
+import UploadedFileCard from "./UploadedFileCard";
 
 export type { ScanResult };
 
+const ACCEPTED_FILE_TYPES =
+  ".zip,.py,.js,.ts,.go,.rs,.cpp,.c,.h,.hpp,.java,.rb,.cs,.yaml,.yml,.toml,.json,.cfg,.conf,.pem,.crt,.cer,application/zip";
+
 export default function ScanConsole({
   onResult,
+  onReset,
 }: {
   onResult: (result: ScanResult) => void;
+  onReset?: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [completed, setCompleted] = useState(false);
+
+  function handleFileSelected(selected: File) {
+    setFile(selected);
+    setError(null);
+  }
 
   async function startScan() {
     if (!file || scanning) return;
@@ -31,52 +43,65 @@ export default function ScanConsole({
     if (!result.ok) {
       setError(result.error);
     } else {
+      setCompleted(true);
       onResult(result.data);
     }
     setScanning(false);
   }
 
+  function startNewSession() {
+    setFile(null);
+    setError(null);
+    setCompleted(false);
+    onReset?.();
+  }
+
   return (
-    <div className="default-radius bg-gray-50 p-4">
-      <label className="block text-md font-semibold text-gray-300 mb-4">Source archive</label>
-      <p className="mb-3 mt-0.5 text-xs text-gray-400">
-        Upload a ZIP of your project folder to scan.
-      </p>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".zip,.py,.js,.ts,.go,.rs,.cpp,.c,.h,.hpp,.java,.rb,.cs,.yaml,.yml,.toml,.json,.cfg,.conf,.pem,.crt,.cer,application/zip"
-          className="hidden"
-          onChange={(e) => {
-            setFile(e.target.files?.[0] ?? null);
-            setError(null);
-          }}
+    <div className={`default-radius ${completed ? "border-2 border-gray-50 p-4" : "bg-gray-50 md:p-8 p-4"}`}>
+      {completed && file ? (
+        <label className="block text-lg font-semibold text-gray-600 mb-4">
+          Uploaded file
+        </label>
+      ) : (
+        <label className="block text-lg font-semibold text-gray-600 mb-4">
+          Upload a file to scan for vulnerabilities
+        </label>
+      )}
+
+      {completed && file ? (
+        <UploadedFileCard file={file} onRemove={startNewSession} />
+      ) : (
+        <FileDropzone
+          accept={ACCEPTED_FILE_TYPES}
+          file={file}
+          onFileSelected={handleFileSelected}
         />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="default-radius flex min-w-0 flex-1 items-center gap-2 border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-500 transition-colors hover:border-gray-300"
-        >
-          <MdUploadFile className="shrink-0 text-lg text-gray-400" />
-          <span className="truncate">
-            {file ? file.name : "Choose a ZIP file"}
-          </span>
-        </button>
-        <LRButton
-          variant="secondary-outline"
-          onClick={() => inputRef.current?.click()}
-        >
-          Choose file
-        </LRButton>
-        <LRButton
-          variant="primary"
-          icon={<MdSearch className="text-lg" />}
-          onClick={startScan}
-          disabled={!file || scanning}
-        >
-          {scanning ? "Scanning…" : "Start qSearch"}
-        </LRButton>
+      )}
+
+      <div className="mt-4 flex gap-4 justify-between">
+        <p className="text-xs text-gray-400">
+          {completed
+            ? "Remove the file above to upload a different one, or start a new session."
+            : "Supported file types: .zip, .py, .js, .ts, .go, .rs, .cpp, .c, .h, .hpp, .java, .rb, .cs, .yaml, .yml, .toml, .json, .cfg, .conf, .pem, .crt, .cer"}
+        </p>
+        {completed ? (
+          <LRButton
+            variant="secondary"
+            icon={<MdRefresh className="text-lg" />}
+            onClick={startNewSession}
+          >
+            Start new session
+          </LRButton>
+        ) : (
+          <LRButton
+            variant="primary"
+            icon={<MdSearch className="text-lg" />}
+            onClick={startScan}
+            disabled={!file || scanning}
+          >
+            {scanning ? "Scanning…" : "Upload & start qSearch"}
+          </LRButton>
+        )}
       </div>
 
       {scanning && (
