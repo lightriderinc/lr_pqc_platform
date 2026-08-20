@@ -57,7 +57,7 @@ export default function ScanConsole({
   }
 
   return (
-    <div className={`default-radius ${completed ? "border-2 border-gray-50" : "bg-gray-50"} p-4`}>
+    <div className={`default-radius ${completed ? "border-2 border-gray-50 p-4" : "bg-gray-50 md:p-8 p-4"}`}>
       {completed && file ? (
         <label className="block text-lg font-semibold text-gray-600 mb-4">
           Uploaded file
