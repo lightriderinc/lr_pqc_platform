@@ -53,7 +53,11 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
       <SectionPanel
         title="Findings summary"
         action={
-          <Badge> Scan completed · {new Date().toLocaleDateString()}</Badge>
+          <Badge>
+            {" "}
+            Scan completed · {new Date().toLocaleDateString()}{" . "}
+            {new Date().toLocaleTimeString()}
+          </Badge>
         }
         cardStyle={
           result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
