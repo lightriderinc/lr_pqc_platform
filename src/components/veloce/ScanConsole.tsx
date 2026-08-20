@@ -3,6 +3,7 @@
 import type { ScanResult } from "@/app/qsearch/actions";
 import { runQSearch } from "@/app/qsearch/actions";
 import LRButton from "@/components/ui/LRButton";
+import type { DragEvent } from "react";
 import { useRef, useState } from "react";
 import { MdSearch, MdUploadFile } from "react-icons/md";
 
@@ -16,7 +17,18 @@ export default function ScanConsole({
   const [file, setFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragActive(false);
+    const dropped = e.dataTransfer.files?.[0] ?? null;
+    if (dropped) {
+      setFile(dropped);
+      setError(null);
+    }
+  }
 
   async function startScan() {
     if (!file || scanning) return;
@@ -38,11 +50,36 @@ export default function ScanConsole({
 
   return (
     <div className="default-radius bg-gray-50 p-4">
-      <label className="block text-md font-semibold text-gray-300 mb-4">Source archive</label>
-      <p className="mb-3 mt-0.5 text-xs text-gray-400">
-        Upload a ZIP of your project folder to scan.
-      </p>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <label className="block text-lg font-semibold text-gray-700 mb-4">Upload a file to scan for vulnerabilities</label>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragActive(true);
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          setDragActive(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          setDragActive(false);
+        }}
+        onDrop={handleDrop}
+        className={`default-radius cursor-pointer border border-dashed px-4 py-10 text-center transition-colors ${
+          dragActive
+            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
+            : "border-gray-200 bg-white hover:border-[var(--brand-primary-light)] hover:bg-[var(--brand-primary)]/5"
+        }`}
+      >
         <input
           ref={inputRef}
           type="file"
@@ -53,22 +90,26 @@ export default function ScanConsole({
             setError(null);
           }}
         />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="default-radius flex min-w-0 flex-1 items-center gap-2 border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-500 transition-colors hover:border-gray-300"
+        <div
+          className={`mb-3 flex justify-center text-3xl transition-colors ${
+            dragActive ? "text-[var(--brand-primary)]" : "text-gray-300"
+          }`}
         >
-          <MdUploadFile className="shrink-0 text-lg text-gray-400" />
-          <span className="truncate">
-            {file ? file.name : "Choose a ZIP file"}
-          </span>
-        </button>
-        <LRButton
-          variant="secondary-outline"
-          onClick={() => inputRef.current?.click()}
-        >
-          Choose file
-        </LRButton>
+          <MdUploadFile />
+        </div>
+        {file ? (
+          <p className="text-sm font-medium text-gray-700">{file.name}</p>
+        ) : (
+          <p className="text-sm text-gray-500">
+            <span className="color-brand-primary font-medium">Click to browse</span> or drag and drop your file here.
+          </p>
+        )}
+        <p className="mx-auto mt-1 max-w-md text-xs text-gray-300">
+          Supported file types: .zip, .py, .js, .ts, .go, .rs, .cpp, .c, .h, .hpp, .java, .rb, .cs, .yaml, .yml, .toml, .json, .cfg, .conf, .pem, .crt, .cer
+        </p>
+      </div>
+
+      <div className="mt-4 flex justify-end">
         <LRButton
           variant="primary"
           icon={<MdSearch className="text-lg" />}

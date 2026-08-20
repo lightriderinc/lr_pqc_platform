@@ -1,14 +1,13 @@
 "use client";
 
 import Badge from "@/components/ui/Badge";
-import EmptyState from "@/components/ui/EmptyState";
 import LRButton from "@/components/ui/LRButton";
 import Modal from "@/components/ui/Modal";
 import SectionPanel from "@/components/ui/SectionPanel";
 import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
 import { useState } from "react";
-import { MdArrowBack, MdArrowForward, MdDownload, MdTravelExplore } from "react-icons/md";
+import { MdArrowBack, MdArrowForward, MdDownload } from "react-icons/md";
 import type { ScanResult } from "./ScanConsole";
 
 const PAGE_SIZE = 50;
@@ -26,15 +25,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
   const [page, setPage] = useState(0);
 
   if (!result) {
-    return (
-      <div className="mt-6">
-        <EmptyState
-          icon={<MdTravelExplore />}
-          title="Upload a file or ZIP to see results"
-          description="Choose a source file or ZIP archive above and run qSearch to discover quantum-vulnerable cryptography. Findings and exportable reports will appear here."
-        />
-      </div>
-    );
+    return <></>;
   }
 
   const totalPages = Math.ceil(result.findings.length / PAGE_SIZE);
@@ -59,45 +50,50 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
 
   return (
     <div className="mt-4 grid gap-5">
-      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Files scanned"
-          value={String(result.files_scanned)}
-          sub="Readable source & certs"
-        />
-        <StatCard
-          label="Quantum-vulnerable"
-          value={String(result.quantum_vulnerable)}
-          sub="Prioritize migration"
-          accent={result.quantum_vulnerable > 0 ? "bad" : "good"}
-        />
-        <StatCard
-          label="High risk"
-          value={String(result.high_risk)}
-          sub="High-priority findings"
-          accent={result.high_risk > 0 ? "warn" : "neutral"}
-        />
-        <StatCard
-          label="PQC-ready"
-          value={String(result.pqc_ready)}
-          sub="Post-quantum usage"
-          accent={result.pqc_ready > 0 ? "good" : "neutral"}
-        />
-      </div>
-
-      <div className="-mt-4 mb-3 flex items-start justify-between gap-4">
-        <span className="text-md font-medium text-gray-400">
-          Scan completed · {new Date().toLocaleDateString()}
-        </span>
-        <LRButton
-          variant="secondary-outline"
-          icon={<MdDownload className="text-lg" />}
-          onClick={downloadFindings}
-          className="default-radius border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
-        >
-          Download findings.json
-        </LRButton>
-      </div>
+      <SectionPanel
+        title="Findings summary"
+        action={
+          <Badge> Scan completed · {new Date().toLocaleDateString()}</Badge>
+        }
+        cardStyle={
+          result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
+        }
+      >
+        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            label="Files scanned"
+            value={String(result.files_scanned)}
+            sub="Readable source & certs"
+          />
+          <StatCard
+            label="Quantum-vulnerable"
+            value={String(result.quantum_vulnerable)}
+            sub="Prioritize migration"
+            accent={result.quantum_vulnerable > 0 ? "bad" : "good"}
+          />
+          <StatCard
+            label="High risk"
+            value={String(result.high_risk)}
+            sub="High-priority findings"
+            accent={result.high_risk > 0 ? "warn" : "neutral"}
+          />
+          <StatCard
+            label="PQC-ready"
+            value={String(result.pqc_ready)}
+            sub="Post-quantum usage"
+            accent={result.pqc_ready > 0 ? "good" : "neutral"}
+          />
+        </div>
+        <div className="flex w-full flex-row justify-end">
+          <LRButton
+            variant="secondary-outline"
+            icon={<MdDownload className="text-lg" />}
+            onClick={downloadFindings}
+          >
+            Download findings.json
+          </LRButton>
+        </div>
+      </SectionPanel>
 
       <SectionPanel
         title="Observed cryptography"
@@ -193,7 +189,10 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
               [
                 { label: "Algorithm", value: activeFinding.algorithm },
                 { label: "Service", value: activeFinding.service },
-                { label: "Classification", value: activeFinding.classification },
+                {
+                  label: "Classification",
+                  value: activeFinding.classification,
+                },
                 { label: "Risk", value: activeFinding.risk },
                 { label: "Confidence", value: activeFinding.confidence },
                 { label: "Provenance", value: activeFinding.provenance },

@@ -13,7 +13,9 @@ export default function QSearchPage() {
       <p className="mb-12 text-sm text-gray-600">
         Discover quantum-vulnerable cryptography across a codebase.
       </p>
-      <ScanConsole onResult={setResult} />
+      <div className="mb-8">
+        <ScanConsole onResult={setResult} />
+      </div>
       <ScanResults result={result} />
     </div>
   );
