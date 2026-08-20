@@ -1,4 +1,5 @@
-import { MdTravelExplore, MdVerifiedUser } from "react-icons/md";
+import { IoDocumentTextSharp } from "react-icons/io5";
+import { MdTravelExplore } from "react-icons/md";
 import SidebarNavGroup from "./SidebarNavGroup";
 import SidebarNavItem from "./SidebarNavItem";
 
@@ -11,19 +12,31 @@ export default function SidebarGroupDefault({
   onNavigate?: () => void;
 }) {
   return (
-    <SidebarNavGroup label="Veloce">
-      <SidebarNavItem
+    <>
+      <SidebarNavGroup label="Veloce">
+        {/* <SidebarNavItem
         name="Dashboard"
         href="/"
         icon={MdVerifiedUser}
         onNavigate={onNavigate}
-      />
-      <SidebarNavItem
-        name="qSearch"
-        href="/qsearch"
-        icon={MdTravelExplore}
-        onNavigate={onNavigate}
-      />
-    </SidebarNavGroup>
+      /> */}
+        <SidebarNavItem
+          name="qSearch"
+          href="/qsearch"
+          icon={MdTravelExplore}
+          onNavigate={onNavigate}
+        />
+      </SidebarNavGroup>
+
+      <SidebarNavGroup label="Resources">
+        <SidebarNavItem
+          name="Documentation"
+          external
+          href="https://docs.lightriderinc.com/pqc/introduction.html"
+          icon={IoDocumentTextSharp}
+          onNavigate={onNavigate}
+        />
+      </SidebarNavGroup>
+    </>
   );
 }
