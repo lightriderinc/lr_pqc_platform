@@ -6,18 +6,39 @@ import Modal from "@/components/ui/Modal";
 import SectionPanel from "@/components/ui/SectionPanel";
 import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   MdArrowBack,
+  MdArrowDownward,
   MdArrowForward,
+  MdArrowUpward,
   MdDangerous,
   MdDownload,
   MdOutlineWarning,
   MdShield,
+  MdUnfoldMore,
 } from "react-icons/md";
 import type { ScanResult } from "./ScanConsole";
 
 const PAGE_SIZE = 50;
+
+type SortKey = "classification" | "risk";
+type SortDir = "asc" | "desc";
+
+const CLASSIFICATION_ORDER: Record<string, number> = {
+  "quantum-vulnerable": 0,
+  "pqc-ready": 1,
+};
+
+const RISK_ORDER: Record<string, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+function rankOf(order: Record<string, number>, value: string) {
+  return value in order ? order[value] : Object.keys(order).length;
+}
 
 function classificationVariant(c: string) {
   if (c === "quantum-vulnerable") return "vulnerable" as const;
@@ -25,23 +46,79 @@ function classificationVariant(c: string) {
   return "context" as const;
 }
 
+function SortableHeader({
+  label,
+  sortKeyName,
+  activeKey,
+  dir,
+  onSort,
+}: {
+  label: string;
+  sortKeyName: SortKey;
+  activeKey: SortKey | null;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+}) {
+  const isActive = activeKey === sortKeyName;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(sortKeyName)}
+      className="flex items-center gap-1 font-medium text-gray-700 hover:text-gray-900"
+    >
+      {label}
+      {!isActive ? (
+        <MdUnfoldMore className="text-gray-300" />
+      ) : dir === "asc" ? (
+        <MdArrowUpward />
+      ) : (
+        <MdArrowDownward />
+      )}
+    </button>
+  );
+}
+
 export default function ScanResults({ result }: { result: ScanResult | null }) {
   const [activeFinding, setActiveFinding] = useState<
     ScanResult["findings"][0] | null
   >(null);
   const [page, setPage] = useState(0);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const sortedFindings = useMemo(() => {
+    if (!result || !sortKey) return result?.findings ?? [];
+    const order = sortKey === "classification" ? CLASSIFICATION_ORDER : RISK_ORDER;
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...result.findings].sort(
+      (a, b) => dir * (rankOf(order, a[sortKey]) - rankOf(order, b[sortKey])),
+    );
+  }, [result, sortKey, sortDir]);
 
   if (!result) {
     return <></>;
   }
 
-  const totalPages = Math.ceil(result.findings.length / PAGE_SIZE);
-  const paginated = result.findings.slice(
+  function toggleSort(key: SortKey) {
+    setPage(0);
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir("asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+    } else {
+      setSortKey(null);
+      setSortDir("asc");
+    }
+  }
+
+  const totalPages = Math.ceil(sortedFindings.length / PAGE_SIZE);
+  const paginated = sortedFindings.slice(
     page * PAGE_SIZE,
     (page + 1) * PAGE_SIZE,
   );
   const start = page * PAGE_SIZE + 1;
-  const end = Math.min((page + 1) * PAGE_SIZE, result.findings.length);
+  const end = Math.min((page + 1) * PAGE_SIZE, sortedFindings.length);
 
   function downloadFindings() {
     const blob = new Blob([JSON.stringify(result, null, 2)], {
@@ -121,7 +198,26 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
           <p className="py-6 text-center text-sm text-gray-400">No findings.</p>
         ) : (
           <TableShell
-            columns={["Algorithm", "Classification", "Risk", "Asset"]}
+            columns={[
+              "Algorithm",
+              <SortableHeader
+                key="classification"
+                label="Classification"
+                sortKeyName="classification"
+                activeKey={sortKey}
+                dir={sortDir}
+                onSort={toggleSort}
+              />,
+              <SortableHeader
+                key="risk"
+                label="Risk"
+                sortKeyName="risk"
+                activeKey={sortKey}
+                dir={sortDir}
+                onSort={toggleSort}
+              />,
+              "Asset",
+            ]}
             columnWidths={[
               "min-w-[140px]",
               "min-w-[160px]",

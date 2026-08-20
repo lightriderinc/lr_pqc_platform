@@ -9,7 +9,7 @@ export default function TableShell({
   children,
   emptyLabel = "No data yet — connect qSearch to populate findings.",
 }: {
-  columns: string[];
+  columns: ReactNode[];
   columnWidths?: string[];
   children?: ReactNode;
   emptyLabel?: string;
@@ -21,7 +21,7 @@ export default function TableShell({
           <tr>
             {columns.map((col, i) => (
               <th
-                key={col}
+                key={i}
                 className={`sticky top-0 border-b border-gray-100 bg-gray-50 px-4 py-2 text-left font-medium text-gray-700 truncate ${columnWidths?.[i] ?? ""}`}
               >
                 {col}
