@@ -146,9 +146,8 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
             {completedAt.toLocaleTimeString()}
           </Badge>
         }
-        cardStyle={
-          result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
-        }
+        cardStyle= "p-0"
+
       >
         <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
