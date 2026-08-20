@@ -86,6 +86,8 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
+  const completedAt = useMemo(() => new Date(), [result]);
+
   const sortedFindings = useMemo(() => {
     if (!result || !sortKey) return result?.findings ?? [];
     const order = sortKey === "classification" ? CLASSIFICATION_ORDER : RISK_ORDER;
@@ -139,9 +141,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         action={
           <Badge>
             {" "}
-            Scan completed · {new Date().toLocaleDateString()}
+            Scan completed · {completedAt.toLocaleDateString()}
             {" . "}
-            {new Date().toLocaleTimeString()}
+            {completedAt.toLocaleTimeString()}
           </Badge>
         }
         cardStyle={
