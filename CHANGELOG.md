@@ -1,3 +1,11 @@
+## [1.2.1](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.2.0...v1.2.1) (2026-08-21)
+
+
+### Bug Fixes
+
+* responsive action buttons in scan console ([0823d8c](https://github.com/lightriderinc/lr_pqc_platform/commit/0823d8c7ee26d50267c515d894e5f5a16ed8dc66))
+* updated result page buttons ([a590c79](https://github.com/lightriderinc/lr_pqc_platform/commit/a590c79bf37033887eef7a8bad69cc23bba97950))
+
 # [1.2.0](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.1.1...v1.2.0) (2026-08-21)
 
 
