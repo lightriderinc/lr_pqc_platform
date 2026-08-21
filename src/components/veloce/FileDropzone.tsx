@@ -6,23 +6,51 @@ import { ImUpload3 } from "react-icons/im";
 import { MdInsertDriveFile } from "react-icons/md";
 import { formatFileSize } from "./UploadedFileCard";
 
+function isFileAccepted(file: File, accept: string): boolean {
+  const rules = accept
+    .split(",")
+    .map((rule) => rule.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (rules.length === 0) return true;
+
+  const fileName = file.name.toLowerCase();
+  const mimeType = file.type.toLowerCase();
+
+  return rules.some((rule) => {
+    if (rule.startsWith(".")) return fileName.endsWith(rule);
+    if (rule.endsWith("/*")) return mimeType.startsWith(rule.slice(0, -1));
+    return mimeType === rule;
+  });
+}
+
 export default function FileDropzone({
   accept,
   file,
   onFileSelected,
+  onFileRejected,
 }: {
   accept: string;
   file?: File | null;
   onFileSelected: (file: File) => void;
+  onFileRejected?: (message: string) => void;
 }) {
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function selectFile(candidate: File) {
+    if (isFileAccepted(candidate, accept)) {
+      onFileSelected(candidate);
+    } else {
+      onFileRejected?.(`"${candidate.name}" is not a supported file type.`);
+    }
+  }
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setDragActive(false);
     const dropped = e.dataTransfer.files?.[0];
-    if (dropped) onFileSelected(dropped);
+    if (dropped) selectFile(dropped);
   }
 
   return (
@@ -62,7 +90,8 @@ export default function FileDropzone({
         className="hidden"
         onChange={(e) => {
           const selected = e.target.files?.[0];
-          if (selected) onFileSelected(selected);
+          if (selected) selectFile(selected);
+          e.target.value = "";
         }}
       />
       <div

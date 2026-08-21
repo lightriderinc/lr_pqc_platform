@@ -30,6 +30,10 @@ export default function ScanConsole({
     setError(null);
   }
 
+  function handleFileRejected(message: string) {
+    setError(message);
+  }
+
   async function startScan() {
     if (!file || scanning) return;
     setScanning(true);
@@ -75,6 +79,7 @@ export default function ScanConsole({
           accept={ACCEPTED_FILE_TYPES}
           file={file}
           onFileSelected={handleFileSelected}
+          onFileRejected={handleFileRejected}
         />
       )}
 
