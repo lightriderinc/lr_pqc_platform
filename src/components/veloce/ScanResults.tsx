@@ -146,10 +146,10 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
             {completedAt.toLocaleTimeString()}
           </Badge>
         }
-        cardStyle= "p-0"
+        cardStyle= "p-0 mb-8"
 
       >
-        <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard
             label="Files scanned"
             value={String(result.files_scanned)}
@@ -177,13 +177,13 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
             icon={<MdShield />}
           />
         </div>
-        <div className="flex w-full flex-row justify-end">
+        <div className="flex w-full md:flex-row flex-col justify-end">
           <LRButton
-            variant="secondary-outline"
+            variant="primary"
             icon={<MdDownload className="text-lg" />}
             onClick={downloadFindings}
           >
-            Download findings.json
+            Export qSearch findings
           </LRButton>
         </div>
       </SectionPanel>

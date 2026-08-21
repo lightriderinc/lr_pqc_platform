@@ -91,7 +91,7 @@ export default function ScanConsole({
         </p>
         {completed ? (
           <LRButton
-            variant="secondary"
+            variant="secondary-outline"
             icon={<MdRefresh className="text-lg" />}
             onClick={startNewSession}
           >
