@@ -1,3 +1,16 @@
+# [1.2.0](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.1.1...v1.2.0) (2026-08-21)
+
+
+### Bug Fixes
+
+* accepting unsupported file types removed ([b827769](https://github.com/lightriderinc/lr_pqc_platform/commit/b82776929aeea2756a79ef272a9a8e29eef3b038))
+* scan result summary section style updated ([19d2491](https://github.com/lightriderinc/lr_pqc_platform/commit/19d24911ce9f4e6b6982438f13882f56372a5945))
+
+
+### Features
+
+* added privacy policy ([a173492](https://github.com/lightriderinc/lr_pqc_platform/commit/a17349214fe448e3823bd446e90b931b48541daf))
+
 ## [1.1.1](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.1.0...v1.1.1) (2026-08-20)
 
 
