@@ -83,7 +83,7 @@ export default function ScanConsole({
         />
       )}
 
-      <div className="mt-4 flex gap-4 justify-between">
+      <div className="mt-4 flex md:flex-row flex-col gap-4 justify-between">
         <p className="text-xs text-gray-400">
           {completed
             ? "Remove the file above to upload a different one, or start a new session."
@@ -91,7 +91,7 @@ export default function ScanConsole({
         </p>
         {completed ? (
           <LRButton
-            variant="secondary"
+            variant="secondary-outline"
             icon={<MdRefresh className="text-lg" />}
             onClick={startNewSession}
           >
