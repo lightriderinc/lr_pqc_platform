@@ -1,5 +1,5 @@
 import { IoDocumentTextSharp } from "react-icons/io5";
-import { MdTravelExplore } from "react-icons/md";
+import { MdApps, MdTravelExplore } from "react-icons/md";
 import SidebarNavGroup from "./SidebarNavGroup";
 import SidebarNavItem from "./SidebarNavItem";
 
@@ -24,6 +24,15 @@ export default function SidebarGroupDefault({
           name="qSearch"
           href="/qsearch"
           icon={MdTravelExplore}
+          onNavigate={onNavigate}
+        />
+      </SidebarNavGroup>
+      
+      <SidebarNavGroup label="Explore">
+        <SidebarNavItem
+          name="Applications"
+          href="/applications"
+          icon={MdApps}
           onNavigate={onNavigate}
         />
       </SidebarNavGroup>
