@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.2.1...v1.2.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* sidebar groups ([e36fcc6](https://github.com/lightriderinc/lr_pqc_platform/commit/e36fcc6165de09c19330aead91a9b3dd62dbb397))
+
 ## [1.2.1](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.2.0...v1.2.1) (2026-08-21)
 
 
