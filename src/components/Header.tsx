@@ -44,7 +44,7 @@ export default async function Header() {
         {/* Desktop: account badge + auth button. Mobile: hamburger drawer,
             with the same controls pinned to its bottom. */}
         <div className="hidden items-center gap-2 lg:flex">{authControls}</div>
-        <MobileMenu>
+        <MobileMenu isAuthenticated={isAuthenticated}>
           <div className="flex flex-col gap-2">{authControls}</div>
         </MobileMenu>
       </div>

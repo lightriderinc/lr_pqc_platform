@@ -14,8 +14,10 @@ import SidebarNavMain from "./sidebar/SidebarNavMain";
 // pinned to the bottom for account controls once auth exists.
 export default function MobileMenu({
   children,
+  isAuthenticated = false,
 }: {
   children?: React.ReactNode;
+  isAuthenticated?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -85,7 +87,10 @@ export default function MobileMenu({
             <></>
           )}
 
-          <SidebarNavMain onNavigate={() => setOpen(false)} />
+          <SidebarNavMain
+            onNavigate={() => setOpen(false)}
+            isAuthenticated={isAuthenticated}
+          />
 
           {children && (
             <div className="border-t border-gray-100 p-3">{children}</div>
