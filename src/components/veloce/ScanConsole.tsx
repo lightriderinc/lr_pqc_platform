@@ -1,10 +1,13 @@
 "use client";
 
+import { handleSignIn } from "@/app/actions/auth";
 import type { ScanResult } from "@/app/qsearch/actions";
 import { runQSearch } from "@/app/qsearch/actions";
 import LRButton from "@/components/ui/LRButton";
-import { useState } from "react";
-import { MdRefresh, MdSearch } from "react-icons/md";
+import { beginProtectedWork } from "@/lib/auth/protected-work";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { MdLogin, MdRefresh, MdSearch } from "react-icons/md";
 import FileDropzone from "./FileDropzone";
 import UploadedFileCard from "./UploadedFileCard";
 
@@ -23,11 +26,23 @@ export default function ScanConsole({
   const [file, setFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authRequired, setAuthRequired] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const pathname = usePathname();
+
+  // A selected file, a running scan and finished results all live only in this
+  // component's state, so the silent SSO check must not reload the page out
+  // from under them. Releasing on cleanup re-enables it once there is nothing
+  // left to lose.
+  useEffect(() => {
+    if (!file && !scanning) return;
+    return beginProtectedWork();
+  }, [file, scanning]);
 
   function handleFileSelected(selected: File) {
     setFile(selected);
     setError(null);
+    setAuthRequired(false);
   }
 
   function handleFileRejected(message: string) {
@@ -46,6 +61,7 @@ export default function ScanConsole({
 
     if (!result.ok) {
       setError(result.error);
+      setAuthRequired(result.authRequired ?? false);
     } else {
       setCompleted(true);
       onResult(result.data);
@@ -56,6 +72,7 @@ export default function ScanConsole({
   function startNewSession() {
     setFile(null);
     setError(null);
+    setAuthRequired(false);
     setCompleted(false);
     onReset?.();
   }
@@ -119,7 +136,21 @@ export default function ScanConsole({
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && (
+        <div className="mt-4">
+          <p className="text-sm text-red-600">{error}</p>
+          {authRequired && (
+            <LRButton
+              variant="primary"
+              className="mt-3"
+              icon={<MdLogin className="text-lg" />}
+              onClick={() => handleSignIn(pathname)}
+            >
+              Sign in to continue
+            </LRButton>
+          )}
+        </div>
+      )}
     </div>
   );
 }

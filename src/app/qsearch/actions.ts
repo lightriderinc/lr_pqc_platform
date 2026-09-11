@@ -1,5 +1,6 @@
 "use server";
 
+import { getSession } from "@/lib/auth/session";
 import { execFile } from "child_process";
 import { randomBytes } from "crypto";
 import { unzipSync } from "fflate";
@@ -66,7 +67,7 @@ export type ScanResult = {
 
 type QSearchResponse =
   | { ok: true; data: ScanResult }
-  | { ok: false; error: string };
+  | { ok: false; error: string; authRequired?: boolean };
 
 function getExt(name: string) {
   const i = name.lastIndexOf(".");
@@ -74,6 +75,19 @@ function getExt(name: string) {
 }
 
 export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
+  // The session is verified here, at submit time, rather than by interrupting
+  // the user mid-upload: a server action is a public endpoint, and the session
+  // can end on another platform while a file sits selected. `authRequired`
+  // lets the console offer a sign-in instead of a dead-end error.
+  const { isAuthenticated } = await getSession();
+  if (!isAuthenticated) {
+    return {
+      ok: false,
+      authRequired: true,
+      error: "Your session has ended. Sign in again to run this scan.",
+    };
+  }
+
   const file = formData.get("file");
   if (!(file instanceof File)) {
     return { ok: false, error: "A file is required." };
