@@ -1,25 +1,24 @@
-import { MdAccountCircle } from "react-icons/md";
+import InitialsAvatar from "@/components/ui/InitialsAvatar";
+import Link from "next/link";
 
 type Props = {
   name: string;
-  email?: string;
 };
 
-// Signed-in indicator shown next to the sign-out button in the header (and in
-// the mobile drawer). Purely presentational: Header resolves the Logto
-// session claims and passes down whichever of name/email it found.
-export default function AccountBadge({ name, email }: Props) {
+/** Signed-in indicator in the header (and mobile drawer). Mirrors the cloud
+ *  platform's UserCard in its non-dropdown form, class for class. */
+export default function AccountBadge({ name }: Props) {
   return (
-    <div className="flex min-w-0 items-center gap-2 px-1">
-      <MdAccountCircle className="h-6 w-6 shrink-0 text-gray-400" />
-      <span className="flex min-w-0 flex-col leading-tight">
+    <Link
+      href="/settings/account"
+      className="flex items-center gap-3 default-radius pl-2 pr-5 py-1.5 transition-colors hover:bg-gray-100 cursor-pointer"
+    >
+      <InitialsAvatar name={name} size={32} />
+      <span className="flex min-w-0 flex-col">
         <span className="truncate text-sm font-medium text-gray-700">
           {name}
         </span>
-        {email && email !== name && (
-          <span className="truncate text-xs text-gray-500">{email}</span>
-        )}
       </span>
-    </div>
+    </Link>
   );
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { handleSignIn, handleSignOut } from "@/app/actions/auth";
 import SignIn from "@/app/sign-in";
 import SignOut from "@/app/sign-out";
-import { getSession } from "@/lib/auth/session";
+import { getDisplayName, getSession } from "@/lib/auth/session";
 import AccountBadge from "./AccountBadge";
 import MobileMenu from "./MobileMenu";
 
@@ -15,12 +15,12 @@ import MobileMenu from "./MobileMenu";
 export default async function Header() {
   const { isAuthenticated, claims, userInfo } = await getSession();
 
-  const name = userInfo?.name ?? claims?.name ?? undefined;
+  const displayName = isAuthenticated ? await getDisplayName() : null;
   const email = userInfo?.email ?? claims?.email ?? undefined;
 
   const authControls = isAuthenticated ? (
     <>
-      <AccountBadge name={name ?? email ?? "Account"} email={email} />
+      <AccountBadge name={displayName ?? email ?? "Account"} />
       <SignOut onSignOut={handleSignOut} />
     </>
   ) : (

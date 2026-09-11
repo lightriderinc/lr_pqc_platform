@@ -1,24 +1,30 @@
 import { handleSignOut } from "@/app/actions/auth";
 import SignOut from "@/app/sign-out";
+import SignInRequired from "@/components/auth/SignInRequired";
+import InitialsAvatar from "@/components/ui/InitialsAvatar";
 import { getAccountProfile, getDisplayName, getSession } from "@/lib/auth/session";
 
 /**
  * Account page. Mirrors the cloud platform's /settings/account in structure,
- * typography, and class patterns so the two platforms read as one product.
+ * typography, and class patterns so all three platforms read as one product.
  *
- * Display-only for now, by design rather than omission. Cloud's edit controls
- * split into three groups, and only one of them is portable here today:
- *   - Supabase-backed avatar upload and the Stripe/Prisma plan badge have no
- *     backend in this app at all.
- *   - Connected accounts and authoritative password status come from Logto's
- *     Management API, which needs machine-to-machine credentials this app has
- *     no registered app for.
- *   - The password / email / MFA editors are portable in principle (end-user
- *     Account API only), but each is a multi-step verification flow; they are
- *     tracked as follow-up work rather than half-built here.
+ * Gated inline rather than by a settings layout: these apps have other public
+ * /settings routes, and a layout gate would silently lock those too.
+ *
+ * Display-only. Cloud's edit controls each need something this app does not
+ * have: a database (avatar upload, plan badge) or Management API M2M
+ * credentials (connected accounts, authoritative password status). The
+ * password/email/MFA editors are portable in principle — end-user Account API
+ * only — but each is a multi-step verification flow, tracked as follow-up
+ * rather than half-built here.
  */
 export default async function AccountPage() {
-  const { userInfo, claims } = await getSession();
+  const { isAuthenticated, userInfo, claims } = await getSession();
+
+  if (!isAuthenticated) {
+    return <SignInRequired target="your account settings" />;
+  }
+
   const name = await getDisplayName();
   const account = await getAccountProfile();
 
@@ -33,15 +39,12 @@ export default async function AccountPage() {
       </p>
 
       <div className="flex items-center gap-4 mb-12">
-        <AccountAvatar label={name || email || "Your account"} />
+        <InitialsAvatar name={name || email || "Your account"} size={64} />
         <div className="min-w-0">
           {name && (
             <p className="text-3xl font-semibold text-gray-800 truncate">
               {name}
             </p>
-          )}
-          {email && (
-            <p className="text-sm text-gray-500 truncate">{email}</p>
           )}
         </div>
       </div>
@@ -76,24 +79,6 @@ function InfoRow({ label, value }: { label: string; value: string | null }) {
           {value || "—"}
         </dd>
       </div>
-    </div>
-  );
-}
-
-function AccountAvatar({ label }: { label: string }) {
-  const initials = label
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-
-  return (
-    <div
-      aria-hidden="true"
-      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xl font-semibold text-gray-600"
-    >
-      {initials || "?"}
     </div>
   );
 }
