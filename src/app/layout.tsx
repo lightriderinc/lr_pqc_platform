@@ -1,7 +1,9 @@
+import SessionSync from "@/components/auth/SessionSync";
 import Header from "@/components/Header";
 import Sidebar from "@/components/sidebar/Sidebar";
 import SidebarSecondary from "@/components/sidebar/SidebarSecondary";
 import SidebarSecondaryGate from "@/components/sidebar/SidebarSecondaryGate";
+import { getSession } from "@/lib/auth/session";
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Science_Gothic } from "next/font/google";
 import "./globals.css";
@@ -30,17 +32,20 @@ export const metadata: Metadata = {
 // App shell: fixed header, then a row of the primary sidebar, the optional
 // secondary sidebar, and the scrolling content area. New top-level UI chrome
 // belongs here rather than being duplicated per page.
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { isAuthenticated } = await getSession();
+
   return (
     <html
       lang="en"
       className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${scienceGothic.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col overflow-hidden">
+        <SessionSync initialAuthenticated={isAuthenticated} />
         <Header />
         <div className="flex flex-1 min-h-0">
           <Sidebar />
