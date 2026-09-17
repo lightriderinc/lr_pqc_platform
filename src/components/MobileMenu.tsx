@@ -81,7 +81,10 @@ export default function MobileMenu({
             </div>
           ) : isSettingsRoute ? (
             <div className="border-b border-gray-100 px-3 py-4">
-              <SidebarGroupSettings onNavigate={() => setOpen(false)} />
+              <SidebarGroupSettings
+                onNavigate={() => setOpen(false)}
+                isAuthenticated={isAuthenticated}
+              />
             </div>
           ) : (
             <></>

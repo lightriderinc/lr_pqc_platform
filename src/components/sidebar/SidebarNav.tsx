@@ -9,8 +9,10 @@ import SidebarGroupSettings from "./SidebarGroupSettings";
 // SidebarSecondaryGate) to give another section its own secondary sidebar.
 export default function SidebarNav({
   onNavigate,
+  isAuthenticated,
 }: {
   onNavigate?: () => void;
+  isAuthenticated: boolean;
 }) {
   const pathname = usePathname();
 
@@ -23,7 +25,10 @@ export default function SidebarNav({
         {isLegalRoute ? (
           <SidebarGroupLegal onNavigate={onNavigate} />
         ) : isSettingsRoute ? (
-          <SidebarGroupSettings onNavigate={onNavigate} />
+          <SidebarGroupSettings
+            onNavigate={onNavigate}
+            isAuthenticated={isAuthenticated}
+          />
         ) : (
           <></>
         )}
