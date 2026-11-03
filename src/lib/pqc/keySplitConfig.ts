@@ -69,7 +69,6 @@ export const PRACTICE = {
 export const TEXT = {
   title: "Secret Split",
   intro: "Lock a secret so that several people must work together to open it.",
-  privacy: "Everything runs in your browser. No secret, key, or file is sent to Lightrider.",
   tabs: {
     keys: "1. Custodian key",
     split: "2. Split",

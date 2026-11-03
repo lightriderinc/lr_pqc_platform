@@ -2,7 +2,6 @@
 
 import CopyButton from "@/components/ui/CopyButton";
 import DownloadButton from "@/components/ui/DownloadButton";
-import InfoBox from "@/components/ui/InfoBox";
 import LRButton from "@/components/ui/LRButton";
 import {
   SpeedTestCancelled,
@@ -262,7 +261,6 @@ export default function SpeedTestModal({ onClose }: { onClose: () => void }) {
     <ModalShell title="PQC Speed Test" onClose={onClose} maxWidth="max-w-4xl">
       <div className="space-y-5 pt-4">
         <p className="text-sm text-gray-600">{TEXT.intro}</p>
-        <InfoBox>{TEXT.privacy}</InfoBox>
 
         <div className="grid gap-4 sm:grid-cols-2">
           {FAMILIES.map((family) => (

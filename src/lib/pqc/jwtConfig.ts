@@ -186,7 +186,6 @@ export const STATUS_DISPLAY: Record<QuantumStatus, { label: string; variant: "vu
 export const TEXT = {
   title: "Token Forgery Check",
   intro: "Paste a login token. See if a quantum computer could forge it.",
-  privacy: "Everything runs in your browser. The token and keys are never sent anywhere.",
   tokenLabel: "Token",
   tokenPlaceholder: "Paste a token, for example eyJhbGciOi...",
   sampleButton: "Make a sample token",

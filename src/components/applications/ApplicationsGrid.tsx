@@ -9,7 +9,7 @@ import QuantumSignerModal from "./QuantumSignerModal";
 import QuantumVaultModal from "./QuantumVaultModal";
 import SpeedTestModal from "./SpeedTestModal";
 import HarvestModal from "./HarvestModal";
-import TestVectorModal from "./TestVectorModal";
+import InteropModal from "./InteropModal";
 
 type OpenModal = "vault" | "signer" | "keysplit" | "jwt" | "speed" | "harvest" | "vectors" | null;
 
@@ -61,14 +61,14 @@ export default function ApplicationsGrid() {
         />
         <ApplicationCard
           title="Harvest Now, Decrypt Later"
-          description="Record a key exchange. Attack the recording. See what breaks."
+          description="Record a key exchange. Attack the recording. Check what breaks."
           icon={MdWifiTethering}
           tag="Demo"
           onClick={() => setOpenModal("harvest")}
         />
                 <ApplicationCard
-          title="Test Vector Check"
-          description="Run NIST's official test vectors. Pass or fail, live."
+          title="PQC Compatibility Check"
+          description="Run NIST's official test vectors."
           icon={MdFactCheck}
           tag="Tool"
           onClick={() => setOpenModal("vectors")}
@@ -94,7 +94,7 @@ export default function ApplicationsGrid() {
         <HarvestModal onClose={() => setOpenModal(null)} />
       )}
             {openModal === "vectors" && (
-        <TestVectorModal onClose={() => setOpenModal(null)} />
+        <InteropModal onClose={() => setOpenModal(null)} />
       )}
     </>
   );

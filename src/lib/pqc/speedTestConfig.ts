@@ -94,7 +94,6 @@ export const TEXT = {
   bytesUnit: (label: string) => `${label} (B)`,
   msChange: (before: string, after: string) => `${before} → ${after} ms`,
   intro: "Benchmark post-quantum algorithms on this device.",
-  privacy: "Everything runs in your browser. Nothing is sent anywhere.",
   run: "Run test",
   runAgain: "Run again",
   cancel: "Cancel",

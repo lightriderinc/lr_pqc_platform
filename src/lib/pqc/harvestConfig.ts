@@ -55,7 +55,6 @@ export const LABELS = {
 
 export const TEXT = {
   intro: "Record a key exchange. Then attack the recording.",
-  privacy: "Everything runs in your browser. Nothing is sent anywhere.",
   messageLabel: "Alice's message",
   run: "Run key exchange",
   rerun: "New key exchange",

@@ -1,6 +1,5 @@
 "use client";
 
-import InfoBox from "@/components/ui/InfoBox";
 import LRButton from "@/components/ui/LRButton";
 import {
   attackEc,
@@ -145,7 +144,7 @@ export default function HarvestModal({ onClose }: { onClose: () => void }) {
     <ModalShell title="Harvest Now, Decrypt Later" onClose={onClose} maxWidth="max-w-4xl">
       <div className="space-y-5 pt-4">
         <p className="text-sm text-gray-600">{TEXT.intro}</p>
-        <InfoBox>{TEXT.privacy}</InfoBox>
+        
 
         <div className="flex flex-col gap-2 sm:flex-row">
           <input

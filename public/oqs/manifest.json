@@ -1,0 +1,30 @@
+{
+  "library": "@oqs/liboqs-js",
+  "version": "0.15.1",
+  "files": [
+    {
+      "file": "ml-kem-512.min.js",
+      "sha256": "5314678491020da271d1c552fc478c2ec307cb1d4838789159ab430c48dabe0f"
+    },
+    {
+      "file": "ml-kem-768.min.js",
+      "sha256": "95f35623baf666c486db212f47e3e6798adbed942e942fdcf11cf38491a945d4"
+    },
+    {
+      "file": "ml-kem-1024.min.js",
+      "sha256": "ac3d3b8415783f69f7145922a54fd17b34b7dc8ffeeb0a970931970024cd40c9"
+    },
+    {
+      "file": "ml-dsa-44.min.js",
+      "sha256": "075da8b522030c5fb7e5e93e4570af7f27ddbb0c934507b2fa4f5a0e0d78024c"
+    },
+    {
+      "file": "ml-dsa-65.min.js",
+      "sha256": "7b13b733ba96c1a36d79e4f31175b53d6a962bf8119452ab5ef48dae2db11b83"
+    },
+    {
+      "file": "ml-dsa-87.min.js",
+      "sha256": "5006ffb9e51716ba85c3e60505e12220d059bd1771be816b48548d99b51da34a"
+    }
+  ]
+}

@@ -2,7 +2,6 @@
 
 import CopyButton from "@/components/ui/CopyButton";
 import DownloadButton from "@/components/ui/DownloadButton";
-import InfoBox from "@/components/ui/InfoBox";
 import LRButton from "@/components/ui/LRButton";
 import {
   checkShare,
@@ -578,7 +577,7 @@ export default function KeySplitModal({ onClose }: { onClose: () => void }) {
     <ModalShell title={TEXT.title} onClose={onClose} maxWidth="max-w-2xl">
       <div className="space-y-5 pt-4">
         <p className="text-sm text-gray-600">{TEXT.intro}</p>
-        <InfoBox>{TEXT.privacy}</InfoBox>
+        
 
         <div className="flex gap-1 overflow-x-auto border-b border-gray-100">
           {TAB_ORDER.map((t) => (

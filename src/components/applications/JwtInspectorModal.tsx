@@ -2,7 +2,6 @@
 
 import Badge from "@/components/ui/Badge";
 import CopyButton from "@/components/ui/CopyButton";
-import InfoBox from "@/components/ui/InfoBox";
 import LRButton from "@/components/ui/LRButton";
 import { SAMPLE, SIGNATURE_RISK_NOTE, STATUS_DISPLAY, TEXT, type SampleAlgorithm } from "@/lib/pqc/jwtConfig";
 import {
@@ -258,7 +257,7 @@ export default function JwtInspectorModal({ onClose }: { onClose: () => void }) 
     <ModalShell title={TEXT.title} onClose={onClose} maxWidth="max-w-2xl">
       <div className="space-y-4 pt-4">
         <p className="text-sm text-gray-600">{TEXT.intro}</p>
-        <InfoBox>{TEXT.privacy}</InfoBox>
+        
         <textarea
           value={input}
           onChange={(e) => {
