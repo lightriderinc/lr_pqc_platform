@@ -1,3 +1,17 @@
+# [1.3.0](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.2.2...v1.3.0) (2026-11-09)
+
+
+### Bug Fixes
+
+* no signed-out flash, account page always reads session ([19498e2](https://github.com/lightriderinc/lr_pqc_platform/commit/19498e2cb77b88949f4b66a1e5d0e3e26c759fd5))
+* sign in required panel styles updated ([ee4d81d](https://github.com/lightriderinc/lr_pqc_platform/commit/ee4d81d248002de928c9f96ff569f80220b729b3))
+* updated title weight ([0172676](https://github.com/lightriderinc/lr_pqc_platform/commit/0172676bf011e7e65f41ffbb97852fd6419a912d))
+
+
+### Features
+
+* account management imported ([fabb5bc](https://github.com/lightriderinc/lr_pqc_platform/commit/fabb5bcc1b592901b5d1b542333059b09524b185))
+
 ## [1.2.2](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.2.1...v1.2.2) (2026-08-24)
 
 
