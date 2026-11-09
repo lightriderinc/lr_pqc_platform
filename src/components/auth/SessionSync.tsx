@@ -9,6 +9,7 @@ import {
   SILENT_SSO_STORAGE_KEY,
   isSilentSsoAllowedPath,
 } from "@/lib/auth/silent-sso";
+import { setSilentSsoStatus } from "@/lib/auth/silent-sso-status";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -49,6 +50,9 @@ export default function SessionSync({ initialAuthenticated }: Props) {
   // When the tab was last hidden, so we can tell "came back from another app"
   // apart from "clicked around in this tab".
   const awaySince = useRef<number | null>(null);
+  // Set once this page has navigated away for a silent check, so the page-load
+  // check knows not to tell SignInRequired to stop showing "checking".
+  const navigatedAway = useRef(false);
 
   /**
    * Guard 1 of the loop protection: only redirect if we can *prove* we
@@ -97,6 +101,8 @@ export default function SessionSync({ initialAuthenticated }: Props) {
       // no-location-assign-relative-destination, exists only in the newer
       // eslint-config-next, and naming it breaks lint in the repo on the
       // older one. This file is kept byte-identical across both apps.
+      navigatedAway.current = true;
+      setSilentSsoStatus("redirecting");
       // eslint-disable-next-line
       window.location.assign(
         `/api/auth/silent-check?returnTo=${encodeURIComponent(returnTo)}`,
@@ -138,10 +144,15 @@ export default function SessionSync({ initialAuthenticated }: Props) {
   useEffect(() => {
     // Automatic page-load check: the strict-cooldown path, since this is the
     // only trigger that could re-fire without the user doing anything.
+    //
+    // Unless it navigated away, tell a signed-out page (SignInRequired) to stop
+    // showing its neutral "checking" state (see @/lib/auth/silent-sso-status).
     void syncNow({
       silentCheckCooldownSeconds: knownAuthenticated.current
         ? SIGNED_IN_LOAD_COOLDOWN_SECONDS
         : SIGNED_OUT_LOAD_COOLDOWN_SECONDS,
+    }).then(() => {
+      if (!navigatedAway.current) setSilentSsoStatus("settled");
     });
 
     // Only a genuine visibility change counts as being away. Window blur must
