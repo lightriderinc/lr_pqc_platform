@@ -22,7 +22,7 @@ export default function SectionHeading({
     >
       <div>
         {eyebrow && (
-          <p className="color-brand-primary font-mono text-2xs font-bold uppercase tracking-[0.2em]">
+          <p className="color-brand-primary font-mono text-2xs font-semibold uppercase tracking-[0.2em]">
             {eyebrow}
           </p>
         )}

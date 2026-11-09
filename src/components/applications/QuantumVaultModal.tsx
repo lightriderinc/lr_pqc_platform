@@ -379,7 +379,7 @@ export default function QuantumVaultModal({
                 </div>
 
                 <div>
-                  <p className="text-sm font-bold text-gray-700 mb-2">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
                     Your public key (share this)
                   </p>
                   <div className="default-radius border border-gray-100 bg-gray-50 p-3 flex items-center justify-between gap-2">
@@ -526,7 +526,7 @@ export default function QuantumVaultModal({
             {capsuleResult && (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-bold text-gray-700">
+                  <p className="text-sm font-semibold text-gray-700">
                     Capsule: send this to the recipient
                   </p>
                   <div className="flex gap-2">
@@ -683,7 +683,7 @@ export default function QuantumVaultModal({
                       key={label}
                       className={`default-radius border p-4 ${tint}`}
                     >
-                      <p className="text-sm font-bold text-gray-800 mb-2">
+                      <p className="text-sm font-semibold text-gray-800 mb-2">
                         {label}
                       </p>
                       <p className="text-xs text-gray-500 mb-0.5">

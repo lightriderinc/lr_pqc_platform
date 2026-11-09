@@ -137,14 +137,14 @@ export const SIGNED_IN_LOAD_COOLDOWN_SECONDS = 600;
  * a redirect round-trip returning to this tab never qualifies, short enough
  * that genuinely switching apps always does.
  */
-export const RETURN_FROM_AWAY_MIN_SECONDS = 3;
+export const RETURN_FROM_AWAY_MIN_SECONDS = 30;
 
 /**
  * Floor between return-from-away checks. Nearly free, because this trigger
  * cannot spin on its own — it takes a deliberate tab switch each time. It
  * exists only so focus and visibilitychange firing together count once.
  */
-export const RETURN_CHECK_COOLDOWN_SECONDS = 5;
+export const RETURN_CHECK_COOLDOWN_SECONDS = 120;
 
 /** Route prefixes the silent check must never fire on, to keep redirects acyclic. */
 export const SILENT_SSO_EXCLUDED_PREFIXES = ["/callback", "/api/"];

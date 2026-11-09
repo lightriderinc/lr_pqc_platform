@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { handleSignIn, handleSignOut } from "@/app/actions/auth";
 import SignIn from "@/app/sign-in";
-import SignOut from "@/app/sign-out";
+import { resolveAvatarSources } from "@/lib/avatar";
 import { getDisplayName, getSession } from "@/lib/auth/session";
 import AccountBadge from "./AccountBadge";
 import MobileMenu from "./MobileMenu";
@@ -18,14 +18,17 @@ export default async function Header() {
   const displayName = isAuthenticated ? await getDisplayName() : null;
   const email = userInfo?.email ?? claims?.email ?? undefined;
 
-  const authControls = isAuthenticated ? (
-    <>
-      <AccountBadge name={displayName ?? email ?? "Account"} />
-      <SignOut onSignOut={handleSignOut} />
-    </>
-  ) : (
-    <SignIn onSignIn={handleSignIn} />
+  // Seeded off the raw display name (not the "Account" placeholder below) so
+  // the generated fallback matches the one the account page renders.
+  const { src: avatarUrl, fallbackSrc: fallbackAvatarUrl } = resolveAvatarSources(
+    {
+      picture: userInfo?.picture,
+      name: displayName,
+      email,
+    },
   );
+
+  const accountName = displayName ?? email ?? "Account";
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-100 px-4">
@@ -41,11 +44,32 @@ export default async function Header() {
       </div>
 
       <div className="flex items-center gap-2 mr-2">
-        {/* Desktop: account badge + auth button. Mobile: hamburger drawer,
-            with the same controls pinned to its bottom. */}
-        <div className="hidden items-center gap-2 lg:flex">{authControls}</div>
+        {/* Desktop: account badge (with its own settings/sign-out dropdown) or
+            a sign-in button. Mobile: hamburger drawer with the plain badge
+            (or sign-in button) pinned to its bottom. */}
+        <div className="hidden items-center gap-2 lg:flex">
+          {isAuthenticated ? (
+            <AccountBadge
+              name={accountName}
+              avatarUrl={avatarUrl}
+              fallbackAvatarUrl={fallbackAvatarUrl}
+              dropdown
+              onSignOut={handleSignOut}
+            />
+          ) : (
+            <SignIn onSignIn={handleSignIn} />
+          )}
+        </div>
         <MobileMenu isAuthenticated={isAuthenticated}>
-          <div className="flex flex-col gap-2">{authControls}</div>
+          {isAuthenticated ? (
+            <AccountBadge
+              name={accountName}
+              avatarUrl={avatarUrl}
+              fallbackAvatarUrl={fallbackAvatarUrl}
+            />
+          ) : (
+            <SignIn onSignIn={handleSignIn} />
+          )}
         </MobileMenu>
       </div>
     </header>

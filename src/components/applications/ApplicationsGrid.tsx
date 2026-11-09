@@ -1,12 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { MdEdit, MdLock } from "react-icons/md";
+import { MdEdit, MdGroups, MdLock, MdVpnKey,  MdSpeed, MdWifiTethering, MdFactCheck  } from "react-icons/md";
 import ApplicationCard from "./ApplicationCard";
+import JwtInspectorModal from "./JwtInspectorModal";
+import KeySplitModal from "./KeySplitModal";
 import QuantumSignerModal from "./QuantumSignerModal";
 import QuantumVaultModal from "./QuantumVaultModal";
+import SpeedTestModal from "./SpeedTestModal";
+import HarvestModal from "./HarvestModal";
+import InteropModal from "./InteropModal";
 
-type OpenModal = "vault" | "signer" | null;
+type OpenModal = "vault" | "signer" | "keysplit" | "jwt" | "speed" | "harvest" | "vectors" | null;
 
 export default function ApplicationsGrid() {
   const [openModal, setOpenModal] = useState<OpenModal>(null);
@@ -29,6 +34,45 @@ export default function ApplicationsGrid() {
           tag="Demo"
           onClick={() => setOpenModal("signer")}
         />
+
+        <ApplicationCard
+          title="Secret Split"
+          description="Lock a secret so that several people must work together to open it."
+          icon={MdGroups}
+          tag="Tool"
+          onClick={() => setOpenModal("keysplit")}
+        />
+
+        <ApplicationCard
+          title="Quantum-Aware JWT Inspector"
+          description="Paste a login token. See if a quantum computer could forge it."
+          icon={MdVpnKey}
+          tag="Tool"
+          onClick={() => setOpenModal("jwt")}
+        />
+
+        
+        <ApplicationCard
+          title="PQC Speed Test"
+          description="Benchmark post-quantum algorithms on this device."
+          icon={MdSpeed}
+          tag="Tool"
+          onClick={() => setOpenModal("speed")}
+        />
+        <ApplicationCard
+          title="Harvest Now, Decrypt Later"
+          description="Record a key exchange. Attack the recording. Check what breaks."
+          icon={MdWifiTethering}
+          tag="Demo"
+          onClick={() => setOpenModal("harvest")}
+        />
+                <ApplicationCard
+          title="PQC Compatibility Check"
+          description="Run NIST's official test vectors."
+          icon={MdFactCheck}
+          tag="Tool"
+          onClick={() => setOpenModal("vectors")}
+        />
       </div>
 
       {openModal === "vault" && (
@@ -36,6 +80,21 @@ export default function ApplicationsGrid() {
       )}
       {openModal === "signer" && (
         <QuantumSignerModal onClose={() => setOpenModal(null)} />
+      )}
+      {openModal === "keysplit" && (
+        <KeySplitModal onClose={() => setOpenModal(null)} />
+      )}
+      {openModal === "jwt" && (
+        <JwtInspectorModal onClose={() => setOpenModal(null)} />
+      )}
+      {openModal === "speed" && (
+        <SpeedTestModal onClose={() => setOpenModal(null)} />
+      )}
+      {openModal === "harvest" && (
+        <HarvestModal onClose={() => setOpenModal(null)} />
+      )}
+            {openModal === "vectors" && (
+        <InteropModal onClose={() => setOpenModal(null)} />
       )}
     </>
   );

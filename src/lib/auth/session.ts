@@ -1,6 +1,7 @@
 import { logtoConfig } from "@/app/logto";
 import { getMyProfile } from "@/lib/logto-account";
 import { getAccessToken, getLogtoContext, type LogtoContext } from "@logto/next/server-actions";
+import { connection } from "next/server";
 import { cache } from "react";
 
 /**
@@ -15,6 +16,12 @@ import { cache } from "react";
  * hiccup degrades to a login prompt instead of crashing the whole layout.
  */
 export const getSession = cache(async (): Promise<LogtoContext> => {
+  // Marks every session read as request-time, outside the try so it is never
+  // swallowed. Without it, a build with no Logto env (CI) throws inside
+  // getLogtoContext before it touches the cookie, so nothing tells Next the
+  // read is per-request and it prerenders the signed-out answer as static —
+  // which every visitor, signed in or not, would then be served.
+  await connection();
   try {
     return await getLogtoContext(logtoConfig, { fetchUserInfo: true });
   } catch (err) {
@@ -55,6 +62,7 @@ function isStaleTokenError(err: unknown): boolean {
  * behalf of no one.
  */
 export async function requireLogtoUser() {
+  await connection(); // See getSession() above.
   const { isAuthenticated, claims } = await getLogtoContext(logtoConfig);
   if (!isAuthenticated || !claims?.sub) {
     throw new Error("UNAUTHENTICATED");

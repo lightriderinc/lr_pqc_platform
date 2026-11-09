@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party liboqs WebAssembly builds, copied by scripts/copy-liboqs.mjs.
+    "public/oqs/**",
   ]),
 ]);
 
