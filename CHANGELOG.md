@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.3.0...v1.3.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* return to page after sign-in check, close open redirect ([58cc8cd](https://github.com/lightriderinc/lr_pqc_platform/commit/58cc8cd047439cfd3b63a48bae0ac8802504fee4))
+
 # [1.3.0](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.2.2...v1.3.0) (2026-11-09)
 
 
