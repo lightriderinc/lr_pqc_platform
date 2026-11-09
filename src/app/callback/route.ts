@@ -4,6 +4,7 @@ import {
   CONSENT_RETRY_PARAM,
   consentRetryCookieName,
   sanitizeReturnTo,
+  silentReturnCookieName,
 } from '@/lib/auth/silent-sso';
 import { handleSignIn } from '@logto/next/server-actions';
 import { cookies } from 'next/headers';
@@ -23,7 +24,12 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const error = searchParams.get('error');
-  const returnTo = sanitizeReturnTo(searchParams.get('returnTo'));
+  // Logto's error answers carry no returnTo; the silent check left the page
+  // it started from in a cookie.
+  const returnCookie = silentReturnCookieName(logtoConfig.appId);
+  const returnTo = sanitizeReturnTo(
+    searchParams.get('returnTo') ?? (await cookies()).get(returnCookie)?.value,
+  );
 
   if (error) {
     const target = new URL(returnTo, request.nextUrl.origin);
@@ -36,6 +42,7 @@ export async function GET(request: NextRequest) {
       // where back-channel logout exists this is the slower backstop.
       const response = NextResponse.redirect(target);
       response.cookies.delete({ name: `logto_${logtoConfig.appId}`, path: '/' });
+      response.cookies.delete({ name: returnCookie, path: '/' });
       return response;
     }
 
