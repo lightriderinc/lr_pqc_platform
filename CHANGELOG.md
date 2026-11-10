@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.3.1...v1.3.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* updated page titles ([0151f83](https://github.com/lightriderinc/lr_pqc_platform/commit/0151f832b99fa38b81bb184d631824d2c2a512ce))
+
 ## [1.3.1](https://github.com/lightriderinc/lr_pqc_platform/compare/v1.3.0...v1.3.1) (2026-11-09)
 
 
