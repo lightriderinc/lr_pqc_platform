@@ -25,8 +25,9 @@ const scienceGothic = Science_Gothic({
 });
 
 export const metadata: Metadata = {
-  title: "Light Rider PQC",
-  description: "Light Rider post-quantum cryptography platform.",
+  title: "Light Rider PQC | Find quantum-vulnerable cryptography",
+  description:
+    "Veloce gets you ready for harvest-now-decrypt-later attacks. It finds the cryptography in your code that quantum computers will break, then lets you encrypt and sign with NIST-aligned ML-KEM and ML-DSA keys backed by quantum entropy..",
 };
 
 // App shell: fixed header, then a row of the primary sidebar, the optional

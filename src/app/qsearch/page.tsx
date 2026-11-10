@@ -4,6 +4,7 @@ import ScanConsole, { type ScanResult } from "@/components/veloce/ScanConsole";
 import ScanResults from "@/components/veloce/ScanResults";
 import { useState } from "react";
 
+
 export default function QSearchPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
 

@@ -1,5 +1,9 @@
 import PagePlaceholder from "@/components/PagePlaceholder";
 
+export const metadata = {
+  title: "Terms of Use | Light Rider PQC",
+};
+
 export default function TermsPage() {
   return (
     <div className="animate-fade-in-up">
