@@ -3,13 +3,13 @@ import SignOut from "@/app/sign-out";
 import SignInRequired from "@/components/auth/SignInRequired";
 import ConnectedAccounts from "@/components/profile/ConnectedAccounts";
 import ProfileAvatar from "@/components/profile/ProfileAvatar";
-import { AVATAR_FORM_FIELD, resolveAvatarSources } from "@/lib/avatar";
 import {
   getAccountProfile,
   getDisplayName,
   getSession,
   requireLogtoUser,
 } from "@/lib/auth/session";
+import { AVATAR_FORM_FIELD, resolveAvatarSources } from "@/lib/avatar";
 import {
   bindTotp,
   deleteMfaVerification,
@@ -24,16 +24,20 @@ import {
   verifyEmailCode,
   verifyPassword,
 } from "@/lib/logto-account";
-import { deleteAvatar, uploadAvatar } from "@/lib/supabase/avatars";
 import {
   findUserByPrimaryEmail,
   getUserAccountFacts,
   isManagementApiConfigured,
   type LogtoUserSummary,
 } from "@/lib/logto/management";
+import { deleteAvatar, uploadAvatar } from "@/lib/supabase/avatars";
 import { getAccessToken, signOut } from "@logto/next/server-actions";
 import { revalidatePath } from "next/cache";
 import ProfileActions from "./ProfileActions";
+
+export const metadata = {
+  title: "Account | Light Rider PQC",
+};
 
 /**
  * Account page. Full parity with the cloud platform's /settings/account:
