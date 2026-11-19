@@ -3,6 +3,13 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+  experimental: {
+    serverActions: {
+      // qSearch accepts uploads up to 50 MB (src/app/qsearch/actions.ts),
+      // plus room for multipart overhead. The default is 1 MB.
+      bodySizeLimit: '51mb',
+    },
+  },
   async redirects() {
     return [
       {

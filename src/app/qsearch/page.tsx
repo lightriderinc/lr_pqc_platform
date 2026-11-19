@@ -1,12 +1,21 @@
 "use client";
 
 import ScanConsole, { type ScanResult } from "@/components/veloce/ScanConsole";
+import ScanHistory from "@/components/veloce/ScanHistory";
 import ScanResults from "@/components/veloce/ScanResults";
+import ServerCheck from "@/components/veloce/ServerCheck";
 import { useState } from "react";
 
 
 export default function QSearchPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
+  // Each new result gets fresh table state (page, filters), saved or not.
+  const [run, setRun] = useState(0);
+  const savedId = result?.saved?.id;
+  const show = (r: ScanResult | null) => {
+    setResult(r);
+    setRun((n) => n + 1);
+  };
 
   return (
     <div className="animate-fade-in-up">
@@ -15,9 +24,11 @@ export default function QSearchPage() {
         Discover quantum-vulnerable cryptography across a codebase.
       </p>
       <div className="mb-8">
-        <ScanConsole onResult={setResult} onReset={() => setResult(null)} />
+        <ScanConsole onResult={show} onReset={() => show(null)} />
       </div>
-      <ScanResults result={result} />
+      <ScanResults key={run} result={result} />
+      <ScanHistory refreshKey={savedId} activeId={savedId} onOpen={show} onClear={() => show(null)} />
+      <ServerCheck />
     </div>
   );
 }

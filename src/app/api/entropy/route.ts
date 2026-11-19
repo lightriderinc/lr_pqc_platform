@@ -6,8 +6,29 @@ import { fetchNistBeaconEntropy } from "@/lib/nistBeacon";
 
 export const dynamic = "force-dynamic";
 
-const LR_BASE_URL = process.env.LR_BASE_URL ?? "http://93.127.215.63";
+// No default address: without both settings, quantum entropy is skipped and
+// the response says which source was used. The token is only ever sent over
+// HTTPS, so it cannot be read on the network.
+const LR_BASE_URL = process.env.LR_BASE_URL;
 const LR_TOKEN = process.env.LR_TOKEN;
+const QUANTUM_ENABLED = !!LR_TOKEN && !!LR_BASE_URL?.startsWith("https://");
+if (LR_TOKEN && !QUANTUM_ENABLED) {
+  console.warn("LR_BASE_URL must be set and start with https://; quantum entropy is disabled.");
+}
+
+/** Quantum jobs per client address per minute. Kept in memory, per server instance. */
+const JOBS_PER_MINUTE = 5;
+const recentJobs = new Map<string, number[]>();
+
+function jobAllowed(req: NextRequest): boolean {
+  const client = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const now = Date.now();
+  const times = (recentJobs.get(client) ?? []).filter((t) => now - t < 60_000);
+  if (times.length >= JOBS_PER_MINUTE) return false;
+  times.push(now);
+  recentJobs.set(client, times);
+  return true;
+}
 const SHOTS = 2000; // same order of magnitude as the default in NewJobModal
 const POLL_INTERVAL_MS = 750;
 const POLL_TIMEOUT_MS = 15000;
@@ -69,7 +90,8 @@ async function fetchQuantumEntropy(numBytes: number): Promise<{ bytes: Uint8Arra
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const numBytes = Math.min(Math.max(parseInt(searchParams.get("bytes") || "64", 10), 1), 4096);
+  const requested = parseInt(searchParams.get("bytes") || "64", 10);
+  const numBytes = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 4096) : 64;
   const source = searchParams.get("source");
 
   if (source === "nist-beacon") {
@@ -83,7 +105,7 @@ export async function GET(req: NextRequest) {
       return new Response(Buffer.from(nist.bytes), { headers });
     }
     // NIST unreachable — fall through to CSPRNG below, honestly labeled.
-  } else if (LR_TOKEN) {
+  } else if (QUANTUM_ENABLED && jobAllowed(req)) {
     try {
       const { bytes, jobId } = await fetchQuantumEntropy(numBytes);
       return new Response(Buffer.from(bytes), {

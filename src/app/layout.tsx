@@ -22,6 +22,10 @@ const ibmPlexMono = IBM_Plex_Mono({
 const scienceGothic = Science_Gothic({
   variable: "--font-science-gothic",
   subsets: ["latin"],
+  // Next.js has no size measurements for this font, so it cannot build a
+  // size-matched fallback; use a plain system font instead.
+  adjustFontFallback: false,
+  fallback: ["system-ui", "Arial", "sans-serif"],
 });
 
 export const metadata: Metadata = {

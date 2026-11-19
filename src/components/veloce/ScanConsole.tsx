@@ -5,6 +5,7 @@ import type { ScanResult } from "@/app/qsearch/actions";
 import { runQSearch } from "@/app/qsearch/actions";
 import LRButton from "@/components/ui/LRButton";
 import { beginProtectedWork } from "@/lib/auth/protected-work";
+import { ACCEPT, ACCEPT_TEXT, MAX_UPLOAD_MB } from "@/lib/qsearch/uploads";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MdLogin, MdRefresh, MdSearch } from "react-icons/md";
@@ -13,8 +14,6 @@ import UploadedFileCard from "./UploadedFileCard";
 
 export type { ScanResult };
 
-const ACCEPTED_FILE_TYPES =
-  ".zip,.py,.js,.ts,.go,.rs,.cpp,.c,.h,.hpp,.java,.rb,.cs,.yaml,.yml,.toml,.json,.cfg,.conf,.pem,.crt,.cer,application/zip";
 
 export default function ScanConsole({
   onResult,
@@ -40,9 +39,14 @@ export default function ScanConsole({
   }, [file, scanning]);
 
   function handleFileSelected(selected: File) {
+    setAuthRequired(false);
+    if (selected.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      setFile(null);
+      setError(`This file is larger than ${MAX_UPLOAD_MB} MB. Upload a smaller ZIP, such as one folder of the project.`);
+      return;
+    }
     setFile(selected);
     setError(null);
-    setAuthRequired(false);
   }
 
   function handleFileRejected(message: string) {
@@ -57,16 +61,24 @@ export default function ScanConsole({
     const form = new FormData();
     form.append("file", file);
 
-    const result = await runQSearch(form);
-
-    if (!result.ok) {
-      setError(result.error);
-      setAuthRequired(result.authRequired ?? false);
-    } else {
-      setCompleted(true);
-      onResult(result.data);
+    try {
+      const result = await runQSearch(form);
+      if (!result.ok) {
+        setError(result.error);
+        setAuthRequired(result.authRequired ?? false);
+      } else {
+        setCompleted(true);
+        onResult(result.data);
+      }
+    } catch {
+      // The request itself failed: refused by the hosting service as too
+      // large, cut off by its time limit, or a dropped connection.
+      setError(
+        "The upload did not reach the scanner. The file may be larger than the hosting service accepts, or the connection dropped. Try a smaller ZIP.",
+      );
+    } finally {
+      setScanning(false);
     }
-    setScanning(false);
   }
 
   function startNewSession() {
@@ -93,7 +105,7 @@ export default function ScanConsole({
         <UploadedFileCard file={file} onRemove={startNewSession} />
       ) : (
         <FileDropzone
-          accept={ACCEPTED_FILE_TYPES}
+          accept={ACCEPT}
           file={file}
           onFileSelected={handleFileSelected}
           onFileRejected={handleFileRejected}
@@ -104,7 +116,7 @@ export default function ScanConsole({
         <p className="text-xs text-gray-400">
           {completed
             ? "Remove the file above to upload a different one, or start a new session."
-            : "Supported file types: .zip, .py, .js, .ts, .go, .rs, .cpp, .c, .h, .hpp, .java, .rb, .cs, .yaml, .yml, .toml, .json, .cfg, .conf, .pem, .crt, .cer"}
+            : ACCEPT_TEXT}
         </p>
         {completed ? (
           <LRButton

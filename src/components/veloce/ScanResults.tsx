@@ -1,11 +1,18 @@
 "use client";
 
 import Badge from "@/components/ui/Badge";
+import DownloadButton from "@/components/ui/DownloadButton";
 import LRButton from "@/components/ui/LRButton";
 import Modal from "@/components/ui/Modal";
 import SectionPanel from "@/components/ui/SectionPanel";
 import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
+import InventoryExport from "./InventoryExport";
+import ScanAlerts from "./ScanAlerts";
+import ScanComparison from "./ScanComparison";
+import { keyLabel } from "@/lib/qsearch/algorithms";
+import { buildCbom } from "@/lib/qsearch/cbom";
+import { TAGS, isComment, isTestPath, tagsOf } from "@/lib/qsearch/tags";
 import { useMemo, useState } from "react";
 import {
   MdArrowBack,
@@ -13,7 +20,6 @@ import {
   MdArrowForward,
   MdArrowUpward,
   MdDangerous,
-  MdDownload,
   MdOutlineWarning,
   MdShield,
   MdUnfoldMore,
@@ -38,6 +44,19 @@ const RISK_ORDER: Record<string, number> = {
 
 function rankOf(order: Record<string, number>, value: string) {
   return value in order ? order[value] : Object.keys(order).length;
+}
+
+const KEY_SOURCE = {
+  algorithm: "from the algorithm name",
+  code: "read from the code",
+  certificate: "read from the certificate",
+} as const;
+
+/** "2048 bits, read from the code", or "" when the key size is unknown. */
+function keyText(f: ScanResult["findings"][number]) {
+  const label = keyLabel(f);
+  if (!label) return "";
+  return f.keySource ? `${label}, ${KEY_SOURCE[f.keySource]}` : label;
 }
 
 function classificationVariant(c: string) {
@@ -85,17 +104,47 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [hideTests, setHideTests] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
-  const completedAt = useMemo(() => new Date(), [result]);
+  const completedAt = useMemo(
+    () => (result?.saved ? new Date(result.saved.createdAt) : new Date()),
+    [result],
+  );
+
+  // A new serial number each time the scan is shown, as CycloneDX requires per BOM.
+  const cbom = useMemo(
+    () =>
+      result &&
+      JSON.stringify(
+        // The CBOM lists cryptography in code and files, not mentions in comments.
+        buildCbom(result.findings.filter((f) => !isComment(f)), {
+          project: result.saved?.project ?? "qSearch scan",
+          timestamp: completedAt.toISOString(),
+          serial: crypto.randomUUID(),
+        }),
+        null,
+        2,
+      ),
+    [result, completedAt],
+  );
+
+  const shownFindings = useMemo(
+    () =>
+      (result?.findings ?? []).filter(
+        (f) => (showComments || !isComment(f)) && !(hideTests && isTestPath(f.asset)),
+      ),
+    [result, showComments, hideTests],
+  );
 
   const sortedFindings = useMemo(() => {
-    if (!result || !sortKey) return result?.findings ?? [];
+    if (!sortKey) return shownFindings;
     const order = sortKey === "classification" ? CLASSIFICATION_ORDER : RISK_ORDER;
     const dir = sortDir === "asc" ? 1 : -1;
-    return [...result.findings].sort(
+    return [...shownFindings].sort(
       (a, b) => dir * (rankOf(order, a[sortKey]) - rankOf(order, b[sortKey])),
     );
-  }, [result, sortKey, sortDir]);
+  }, [shownFindings, sortKey, sortDir]);
 
   if (!result) {
     return <></>;
@@ -122,17 +171,14 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
   const start = page * PAGE_SIZE + 1;
   const end = Math.min((page + 1) * PAGE_SIZE, sortedFindings.length);
 
-  function downloadFindings() {
-    const blob = new Blob([JSON.stringify(result, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `qsearch-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const stamp = completedAt.toISOString().slice(0, 10);
+  const { reports, ...scan } = result;
+  const downloads = [
+    { label: "CBOM (CycloneDX 1.6)", value: cbom ?? "", filename: `qsearch-cbom-${stamp}.cdx.json`, mimeType: "application/json" },
+    { label: "Findings (CSV)", value: reports.csv, filename: `qsearch-findings-${stamp}.csv`, mimeType: "text/csv" },
+    { label: "Executive summary", value: reports.summary, filename: `qsearch-summary-${stamp}.txt`, mimeType: "text/plain" },
+    { label: "Findings (JSON)", value: JSON.stringify(scan, null, 2), filename: `qsearch-findings-${stamp}.json`, mimeType: "application/json" },
+  ].filter((d) => d.value);
 
   return (
     <div className="mt-4 grid gap-5">
@@ -177,26 +223,60 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
             icon={<MdShield />}
           />
         </div>
-        <div className="flex w-full md:flex-row flex-col justify-end">
-          <LRButton
-            variant="primary"
-            icon={<MdDownload className="text-lg" />}
-            onClick={downloadFindings}
-          >
-            Export qSearch findings
-          </LRButton>
+        <div className="flex w-full flex-wrap justify-end gap-2">
+          {downloads.map((d) => (
+            <DownloadButton key={d.label} label={d.label} value={d.value} filename={d.filename} mimeType={d.mimeType} />
+          ))}
         </div>
       </SectionPanel>
 
+      <ScanAlerts findings={result.findings} at={completedAt} />
+
+      <ScanComparison saved={result.saved} />
+
+            <InventoryExport result={result} at={completedAt} />
+
       <SectionPanel
         title="Observed cryptography"
-        action={<Badge>{result.findings.length} findings</Badge>}
+        action={
+          <Badge>
+            {sortedFindings.length === result.findings.length
+              ? `${result.findings.length} findings`
+              : `${sortedFindings.length} of ${result.findings.length} findings`}
+          </Badge>
+        }
         cardStyle={
-          result.findings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
+          sortedFindings.length === 0 ? "p-4 sm:p-6 bg-gray-50" : "p-0"
         }
       >
-        {result.findings.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">No findings.</p>
+        <div className="mb-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-700">
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={hideTests}
+              onChange={(e) => {
+                setHideTests(e.target.checked);
+                setPage(0);
+              }}
+            />
+            Hide test files ({result.findings.filter((f) => isTestPath(f.asset)).length})
+          </label>
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={showComments}
+              onChange={(e) => {
+                setShowComments(e.target.checked);
+                setPage(0);
+              }}
+            />
+            Show comments and documentation ({result.findings.filter(isComment).length})
+          </label>
+        </div>
+        {sortedFindings.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">
+            {result.findings.length === 0 ? "No findings." : "No findings match these filters."}
+          </p>
         ) : (
           <TableShell
             columns={[
@@ -217,13 +297,17 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                 dir={sortDir}
                 onSort={toggleSort}
               />,
+              "Key size",
               "Asset",
+              "Notes",
             ]}
             columnWidths={[
               "min-w-[140px]",
               "min-w-[160px]",
               "min-w-[110px]",
+              "min-w-[110px]",
               "min-w-[220px]",
+              "min-w-[140px]",
             ]}
           >
             {paginated.map((f, i) => {
@@ -251,9 +335,23 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                     {f.risk}
                   </td>
                   <td
+                    className={`${borderClass} px-4 py-3 text-sm whitespace-nowrap text-gray-500`}
+                  >
+                    {keyLabel(f) ?? "—"}
+                  </td>
+                  <td
                     className={`${borderClass} px-4 py-3 font-mono text-xs text-gray-500 truncate max-w-[320px]`}
                   >
                     {f.asset}
+                  </td>
+                  <td className={`${borderClass} px-4 py-3`}>
+                    <div className="flex flex-wrap gap-1">
+                      {tagsOf(f, completedAt).map((t) => (
+                        <Badge key={t} variant={TAGS[t].variant}>
+                          {TAGS[t].label}
+                        </Badge>
+                      ))}
+                    </div>
                   </td>
                 </tr>
               );
@@ -264,7 +362,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         {totalPages > 1 && (
           <div className="mt-3 flex items-center justify-between text-sm">
             <span>
-              {start}–{end} of {result.findings.length} findings
+              {start}–{end} of {sortedFindings.length} findings
             </span>
             <div className="flex items-center gap-3">
               <LRButton
@@ -314,11 +412,26 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                   value: activeFinding.classification,
                 },
                 { label: "Risk", value: activeFinding.risk },
+                { label: "Key size", value: keyText(activeFinding) },
+                { label: "Subject", value: activeFinding.certificate?.subject ?? "" },
+                { label: "Issuer", value: activeFinding.certificate?.issuer ?? "" },
+                {
+                  label: "Valid until",
+                  value: activeFinding.certificate
+                    ? new Date(activeFinding.certificate.notValidAfter).toLocaleString()
+                    : "",
+                },
                 { label: "Confidence", value: activeFinding.confidence },
                 { label: "Provenance", value: activeFinding.provenance },
                 { label: "Asset", value: activeFinding.asset },
                 { label: "Evidence", value: activeFinding.evidence },
                 { label: "Detail", value: activeFinding.detail },
+                {
+                  label: "Notes",
+                  value: tagsOf(activeFinding, completedAt)
+                    .map((t) => TAGS[t].note)
+                    .join(" "),
+                },
               ] as const
             )
               .filter((row) => row.value)
