@@ -58,9 +58,10 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
   );
   const priority = isPriority(system, at);
   const missing = missingItems(system);
-  const project = result.saved?.project ?? "scan";
-  const source = `qSearch scan of ${project}, ${at.toISOString().slice(0, 10)}`;
+  const project = result.saved?.project;
   const stamp = at.toISOString().slice(0, 10);
+  const source = project ? `qSearch scan of ${project}, ${stamp}` : `qSearch scan, ${stamp} (not saved)`;
+  const fileStem = `inventory-${project ?? "unsaved"}-${stamp}`;
 
   const set = (key: keyof SystemDetails) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -69,7 +70,7 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
 
   async function save() {
     if (!result.saved) return;
-        setSaving(true);
+    setSaving(true);
     try {
       const response = await saveSystemDetails(result.saved.id, system);
       setMessage(
@@ -86,14 +87,14 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
 
   return (
     <SectionPanel
-        title="Cryptographic inventory (OMB M-23-02 data items)"
+      title="Cryptographic inventory (OMB M-23-02 data items)"
       action={<Badge>{rows.length} quantum-vulnerable cryptographic {rows.length === 1 ? "system" : "systems"}</Badge>}
     >
       <div className="space-y-6">
         <p className="text-sm text-gray-600">
           OMB M-23-02 asks for nine items about each information system. Item 4, the quantum-vulnerable cryptography,
           comes from this scan. The other items describe the system, and only its owner can supply them. OMB M-26-15
-                    (June 2026) asks for this inventory to be kept current and sets the order of migration used below.
+          (June 2026) asks for this inventory to be kept current and sets the order of migration used below.
         </p>
         <p className="text-xs text-gray-500">
           This organizes the data those memos ask for; it is not an official submission form. Agencies submit through
@@ -226,13 +227,13 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
           <DownloadButton
             label="Inventory (CSV)"
             value={inventoryCsv(rows, system, at, source)}
-            filename={`inventory-${project}-${stamp}.csv`}
+            filename={`${fileStem}.csv`}
             mimeType="text/csv"
           />
           <DownloadButton
             label="Inventory (JSON)"
             value={inventoryJson(rows, system, at, source)}
-            filename={`inventory-${project}-${stamp}.json`}
+            filename={`${fileStem}.json`}
             mimeType="application/json"
           />
         </div>

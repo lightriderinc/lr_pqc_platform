@@ -1,34 +1,18 @@
-# qSearch Service
+# qSearch scanner
 
-A small Python HTTP server that receives a ZIP archive, unpacks it, runs `qsearch` against it, and returns JSON findings.
+The qSearch page (`src/app/qsearch/actions.ts`) runs the program in this
+folder on every upload: `qsearch` on Linux, `qsearch.exe` on Windows.
 
-## Setup
+| File | Version | Notes |
+| --- | --- | --- |
+| `qsearch` | 1.4.0 | Static Linux x86-64 build. Checksum in `qsearch.sha256`, verified by CI |
+| `qsearch.exe` | 1.0.0 | Older build; results on Windows differ from Linux |
 
-1. Copy `qsearch.exe` (Windows) or `qsearch` (Linux) into this folder.
-   - Windows: `Veloce-main\qsearch\target\release\qsearch.exe`
-   - Linux: `build/bin/qsearch`
+Source: the Veloce repository, `qsearch/`. The 1.4.0 build includes changes
+not yet merged into Veloce: the key and certificate collector, whole-word and
+any-case matching, new patterns, and low confidence for comments. Merge them
+into Veloce before building a replacement from it, or these fixes are lost.
+Replacing `qsearch` also means updating `qsearch.sha256` in the same commit.
 
-2. Start the service:
-   ```
-   python server.py
-   ```
-   It listens on `http://127.0.0.1:8787/scan` by default.
-
-3. Set in `.env.local`:
-   ```
-   QSEARCH_SERVICE_URL=http://127.0.0.1:8787/scan
-   ```
-
-## Environment variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `QSEARCH_SERVICE_PORT` | `8787` | Port to listen on |
-| `QSEARCH_BIN` | `./qsearch.exe` | Path to the qsearch binary |
-
-## Limits
-
-- Max upload: 50 MB
-- Max files in ZIP: 5000
-- Max extracted size: 200 MB
-- Scan timeout: 300 seconds
+The scanner runs with an empty environment, so it never sees the website's
+secrets. `server.py` is a standalone HTTP wrapper; the website does not use it.

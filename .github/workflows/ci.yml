@@ -11,10 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Fails if the scanner program was replaced without updating its checksum.
+      - run: sha256sum -c qsearch-service/qsearch.sha256
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm install
+      - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm run build

@@ -98,7 +98,14 @@ function fromCertificate(file: Buffer, fingerprint: string): Omit<KeyDetails, "k
       continue;
     }
     if (cert.fingerprint256.replace(/:/g, "").toLowerCase() !== fingerprint) continue;
-    const key = cert.publicKey.asymmetricKeyDetails ?? {};
+    // Node cannot read every key type yet (ML-DSA in Node 22, for example);
+    // the certificate's details are still reported, with the size from its name.
+    let key: { modulusLength?: number; namedCurve?: string } = {};
+    try {
+      key = cert.publicKey.asymmetricKeyDetails ?? {};
+    } catch {
+      /* unreadable key type */
+    }
     const curve = key.namedCurve ? CURVES.find((c) => c.pattern.test(key.namedCurve!)) : undefined;
     const keyBits = key.modulusLength ?? curve?.bits ?? null;
     return {

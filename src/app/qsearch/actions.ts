@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { compareFindings, type Comparison } from "@/lib/qsearch/compare";
 import { cleanSystem, type SystemDetails } from "@/lib/qsearch/inventory";
 import { keyDetails, type CertificateDetails, type KeySource } from "@/lib/qsearch/enrich";
+import { redactDetail } from "@/lib/qsearch/redact";
 import { CheckError, checkServer, serverFindings, type ServerCheck } from "@/lib/qsearch/serverCheck";
 import {
   deleteScan as deleteStoredScan,
@@ -167,7 +168,7 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
   // the user mid-upload: a server action is a public endpoint, and the session
   // can end on another platform while a file sits selected. `authRequired`
   // lets the console offer a sign-in instead of a dead-end error.
-    const owner = await currentOwner();
+  const owner = await currentOwner();
   if (!owner) return SIGNED_OUT;
   if (rateLimited(owner, "scan")) {
     return { ok: false, error: `You can run up to ${PER_MINUTE} scans a minute. Try again shortly.` };
@@ -179,7 +180,7 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
   }
 
   if (file.size > MAX_UPLOAD) {
-        return { ok: false, error: `File is larger than ${MAX_UPLOAD_MB} MB.` };
+    return { ok: false, error: `File is larger than ${MAX_UPLOAD_MB} MB.` };
   }
 
   const ext = getExt(file.name);
@@ -225,6 +226,9 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
     await execFileAsync(QSEARCH_BIN, ["scan", ".", "--out", outDir, "--quiet"], {
       cwd: srcDir,
       timeout: TIMEOUT,
+      // Only PATH: the scanner never sees the website's secrets (Supabase,
+      // Logto, LR_TOKEN), which it would otherwise inherit.
+      env: { PATH: process.env.PATH ?? "/usr/bin:/bin", NODE_ENV: process.env.NODE_ENV },
     });
 
     const read = (name: string) => readFile(join(outDir, name), "utf8");
@@ -265,7 +269,8 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
           risk: f.risk ?? "",
           asset: f.asset ?? "",
           evidence: f.source_of_evidence ?? "",
-          detail: f.detail ?? "",
+          // Secrets on the matched line are hidden before anything is shown or saved.
+          detail: redactDetail(f.detail ?? ""),
           service: f.cryptographic_service ?? "",
           provenance: f.provenance ?? "",
           confidence: f.confidence ?? "",
@@ -284,7 +289,7 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
     const timedOut = (err as { killed?: boolean })?.killed === true;
     return {
       ok: false,
-            error: timedOut ? "The scan took longer than 50 seconds and was stopped. Try a smaller upload." : "The scan could not be completed.",
+      error: timedOut ? "The scan took longer than 50 seconds and was stopped. Try a smaller upload." : "The scan could not be completed.",
     };
   } finally {
     await rm(tmp, { recursive: true, force: true }).catch(() => { });
@@ -390,7 +395,7 @@ export async function runServerCheck(
   if (typeof host !== "string" || (port !== undefined && (typeof port !== "number" || !Number.isInteger(port)))) {
     return { ok: false, error: "Enter a hostname, such as example.com." };
   }
-    if (rateLimited(owner, "check")) {
+  if (rateLimited(owner, "check")) {
     return { ok: false, error: `You can check up to ${PER_MINUTE} servers a minute. Try again shortly.` };
   }
   try {
