@@ -1,22 +1,31 @@
 "use client";
 
-import { saveSystemDetails } from "@/app/qsearch/actions";
+import { saveInventory } from "@/app/qsearch/actions";
 import Badge from "@/components/ui/Badge";
+import AutoFill from "./AutoFill";
 import DownloadButton from "@/components/ui/DownloadButton";
 import LRButton from "@/components/ui/LRButton";
 import SectionPanel from "@/components/ui/SectionPanel";
 import TableShell from "@/components/ui/TableShell";
 import {
+  ADDABLE_ALGORITHMS,
+  EMPTY_REVIEW,
   EMPTY_SYSTEM,
+  EXCLUDE_REASONS,
   FIPS_199,
   HOSTING,
+  SERVICES,
   SOFTWARE_TYPES,
+  cleanReview,
   cleanSystem,
   inventoryCsv,
   inventoryJson,
   inventoryRows,
   isPriority,
   missingItems,
+  type Exclusion,
+  type InventoryRow,
+  type Review,
   type SystemDetails,
 } from "@/lib/qsearch/inventory";
 import { useMemo, useState } from "react";
@@ -30,6 +39,13 @@ const toForm = (s: SystemDetails): Form =>
 
 const inputClass =
   "default-radius w-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-300";
+const cellClass = "border-b border-gray-100 px-4 py-3 text-sm text-gray-700";
+
+/** Locations listed when a row is opened; the rest are counted. */
+const MAX_SHOWN = 20;
+
+/** The file part of a location such as "./src/app.py:12". */
+const fileOf = (location: string) => location.replace(/:\d+$/, "");
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -41,20 +57,33 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+/** A pending decision to set a row or a file aside, waiting for its reason. */
+type Pending = { kind: Exclusion["kind"]; target: string; label: string };
+
+const EMPTY_ADD = { algorithm: "RSA", service: "digital signatures", keyLength: "", source: "", note: "" };
+
 /**
  * The scan as a federal cryptographic inventory: the system details only its
- * owner knows, plus each quantum-vulnerable cryptographic system found.
+ * owner knows, each quantum-vulnerable cryptographic system found, and the
+ * owner's review of them: rows and files set aside with a reason, and rows
+ * added from sources a code scan cannot see.
  */
 export default function InventoryExport({ result, at }: { result: ScanResult; at: Date }) {
   const [form, setForm] = useState<Form>(() => toForm(result.saved?.system ?? EMPTY_SYSTEM));
+  const [review, setReview] = useState<Review>(() => result.saved?.review ?? EMPTY_REVIEW);
   const [includeTests, setIncludeTests] = useState(false);
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [reason, setReason] = useState<Exclusion["reason"]>(EXCLUDE_REASONS[0]);
+  const [reasonNote, setReasonNote] = useState("");
+  const [adding, setAdding] = useState(EMPTY_ADD);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   const system = useMemo(() => cleanSystem(form), [form]);
-  const rows = useMemo(
-    () => inventoryRows(result.findings, system, { includeTests, asOf: at }),
-    [result, system, includeTests, at],
+  const inv = useMemo(
+    () => inventoryRows(result.findings, system, { includeTests, asOf: at, review }),
+    [result, system, includeTests, at, review],
   );
   const priority = isPriority(system, at);
   const missing = missingItems(system);
@@ -63,23 +92,60 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
   const source = project ? `qSearch scan of ${project}, ${stamp}` : `qSearch scan, ${stamp} (not saved)`;
   const fileStem = `inventory-${project ?? "unsaved"}-${stamp}`;
 
+  /** Every change goes through cleanReview, so limits hold before saving too. */
+  function changeReview(next: Review) {
+    setReview(cleanReview(next));
+    setMessage(null);
+  }
+
   const set = (key: keyof SystemDetails) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
     setMessage(null);
   };
 
+  function startExclusion(p: Pending) {
+    setPending(p);
+    setReason(EXCLUDE_REASONS[0]);
+    setReasonNote("");
+  }
+
+  function confirmExclusion() {
+    if (!pending) return;
+    changeReview({
+      ...review,
+      exclusions: [...review.exclusions, { kind: pending.kind, target: pending.target, reason, note: reasonNote }],
+    });
+    setPending(null);
+    setOpenRow(null);
+  }
+
+  function restore(kind: Exclusion["kind"], target: string) {
+    changeReview({ ...review, exclusions: review.exclusions.filter((e) => !(e.kind === kind && e.target === target)) });
+  }
+
+  function removeAdded(row: InventoryRow) {
+    const index = Number(row.key.slice("added:".length));
+    changeReview({ ...review, additions: review.additions.filter((_, i) => i !== index) });
+  }
+
+  function addRow() {
+    if (!adding.source.trim()) return;
+    changeReview({ ...review, additions: [...review.additions, adding as Review["additions"][number]] });
+    setAdding(EMPTY_ADD);
+  }
+
   async function save() {
     if (!result.saved) return;
     setSaving(true);
     try {
-      const response = await saveSystemDetails(result.saved.id, system);
+      const response = await saveInventory(result.saved.id, system, review);
       setMessage(
         response.ok
-          ? { text: `Saved. Later scans of ${project} will start with these details.`, error: false }
+          ? { text: `Saved. Later scans of ${project} will start with these details and this review.`, error: false }
           : { text: response.error, error: true },
       );
     } catch {
-      setMessage({ text: "The details did not reach the server. Check your connection and try again.", error: true });
+      setMessage({ text: "The inventory did not reach the server. Check your connection and try again.", error: true });
     } finally {
       setSaving(false);
     }
@@ -88,7 +154,7 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
   return (
     <SectionPanel
       title="Cryptographic inventory (OMB M-23-02 data items)"
-      action={<Badge>{rows.length} quantum-vulnerable cryptographic {rows.length === 1 ? "system" : "systems"}</Badge>}
+      action={<Badge>{inv.rows.length} quantum-vulnerable cryptographic {inv.rows.length === 1 ? "system" : "systems"}</Badge>}
     >
       <div className="space-y-6">
         <p className="text-sm text-gray-600">
@@ -162,7 +228,7 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
           <Field label="8. Data types" hint="As described by national records management categories.">
             <input className={inputClass} value={form.dataTypes} onChange={set("dataTypes")} maxLength={300} />
           </Field>
-          <Field label="8. Years the data needs protection" hint={`Data still sensitive in 2030 makes the system a priority.`}>
+          <Field label="8. Years the data needs protection" hint="Data still sensitive in 2030 makes the system a priority.">
             <input
               className={inputClass}
               type="number"
@@ -188,56 +254,270 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
           {missing.length > 0 && <p className="text-amber-700">Still needed: {missing.join(", ")}.</p>}
         </div>
 
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-800">4. Cryptographic systems: review</h3>
+          <p className="text-sm text-gray-600">
+            A code scan also matches algorithm names in text and data, and cannot see cryptography handled by services.
+            Open a row to see where it was found; exclude rows or files that are not in real use, and add what the scan
+            cannot see, such as your sign-in provider&apos;s signing keys or a server&apos;s TLS settings.
+          </p>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={includeTests} onChange={(e) => setIncludeTests(e.target.checked)} />
+            Include test files (left out by default: M-23-02 covers cryptography in active use)
+          </label>
+        </div>
+
+        {inv.rows.length === 0 ? (
+          <p className="text-sm text-gray-500">No quantum-vulnerable cryptographic systems to report.</p>
+        ) : (
+          <TableShell columns={["Algorithm", "Service", "Key length", "Occurrences", "Target phase", ""]}>
+            {inv.rows.map((r) => (
+              <RowView
+                key={r.key}
+                row={r}
+                open={openRow === r.key}
+                onToggle={() => setOpenRow(openRow === r.key ? null : r.key)}
+                onExcludeRow={() =>
+                  startExclusion({ kind: "row", target: r.key, label: `${r.algorithm}, ${r.service}, ${r.keyLength}` })
+                }
+                onExcludeFile={(file) => startExclusion({ kind: "file", target: file, label: `every finding in ${file}` })}
+                onRemove={() => removeAdded(r)}
+              />
+            ))}
+          </TableShell>
+        )}
+
+        {pending && (
+          <div className="default-radius space-y-3 border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-medium text-gray-800">Exclude {pending.label}</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Reason">
+                <select className={inputClass} value={reason} onChange={(e) => setReason(e.target.value as Exclusion["reason"])}>
+                  {EXCLUDE_REASONS.map((v) => (
+                    <option key={v}>{v}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Note (optional)">
+                <input
+                  className={inputClass}
+                  value={reasonNote}
+                  onChange={(e) => setReasonNote(e.target.value)}
+                  maxLength={300}
+                />
+              </Field>
+            </div>
+            <div className="flex gap-2">
+              <LRButton type="button" variant="secondary-outline" onClick={confirmExclusion}>
+                Exclude
+              </LRButton>
+              <LRButton type="button" variant="secondary-outline" onClick={() => setPending(null)}>
+                Cancel
+              </LRButton>
+            </div>
+          </div>
+        )}
+
+        {inv.excluded.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-800">Excluded ({inv.excluded.length})</h3>
+            <ul className="space-y-1 text-sm">
+              {inv.excluded.map((r) => {
+                const kind = r.key.startsWith("file:") ? "file" : "row";
+                const target = kind === "file" ? r.key.slice("file:".length) : r.key;
+                return (
+                  <li key={r.key} className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 py-2">
+                    <span className="min-w-0 text-gray-700">
+                      {kind === "file" ? (
+                        <span className="break-all font-mono text-xs">{target}</span>
+                      ) : (
+                        `${r.algorithm}, ${r.service}, ${r.keyLength}`
+                      )}
+                      <span className="text-gray-500">
+                        {" "}
+                        · {r.occurrences} {r.occurrences === 1 ? "finding" : "findings"} · {r.reason}
+                      </span>
+                    </span>
+                    <LRButton type="button" variant="secondary-outline" onClick={() => restore(kind, target)}>
+                      Restore
+                    </LRButton>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        <div className="default-radius space-y-3 border border-gray-100 p-4">
+          <h3 className="text-sm font-semibold text-gray-800">Add cryptography the scan cannot see</h3>
+          <AutoFill
+            onAdd={(rows) => {
+              // Rows already in the inventory are not added twice.
+              const have = new Set(review.additions.map((a) => JSON.stringify([a.algorithm, a.service, a.keyLength, a.source])));
+              const fresh = rows.filter((r) => !have.has(JSON.stringify([r.algorithm, r.service, r.keyLength, r.source])));
+              changeReview({ ...review, additions: [...review.additions, ...fresh] });
+            }}
+          />
+          <p className="pt-2 text-sm text-gray-600">Or add by hand:</p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Field label="Algorithm">
+              <select
+                className={inputClass}
+                value={adding.algorithm}
+                onChange={(e) => setAdding({ ...adding, algorithm: e.target.value })}
+              >
+                {ADDABLE_ALGORITHMS.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Service">
+              <select
+                className={inputClass}
+                value={adding.service}
+                onChange={(e) => setAdding({ ...adding, service: e.target.value })}
+              >
+                {SERVICES.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Key length">
+              <input
+                className={inputClass}
+                value={adding.keyLength}
+                onChange={(e) => setAdding({ ...adding, keyLength: e.target.value })}
+                placeholder="2048 bits, P-256…"
+                maxLength={40}
+              />
+            </Field>
+            <div className="md:col-span-2">
+              <Field label="Where it is used" hint="Required. For example: Logto sign-in tokens, or tls://api.example.com:443.">
+                <input
+                  className={inputClass}
+                  value={adding.source}
+                  onChange={(e) => setAdding({ ...adding, source: e.target.value })}
+                  maxLength={200}
+                />
+              </Field>
+            </div>
+            <Field label="Note (optional)">
+              <input
+                className={inputClass}
+                value={adding.note}
+                onChange={(e) => setAdding({ ...adding, note: e.target.value })}
+                maxLength={300}
+              />
+            </Field>
+          </div>
+          <LRButton type="button" variant="secondary-outline" onClick={addRow} disabled={!adding.source.trim()}>
+            Add to inventory
+          </LRButton>
+        </div>
+
         <div className="flex flex-wrap items-center gap-3">
           {result.saved ? (
             <LRButton type="button" variant="secondary-outline" onClick={save} disabled={saving}>
-              {saving ? "Saving…" : "Save details"}
+              {saving ? "Saving…" : "Save inventory"}
             </LRButton>
           ) : (
             <p className="text-sm text-gray-500">
-              This scan is not saved, so these details are lost when you leave the page. They are still included in the
-              downloads.
+              This scan is not saved, so these details and this review are lost when you leave the page. They are still
+              included in the downloads.
             </p>
           )}
           {message && <p className={`text-sm ${message.error ? "text-red-600" : "text-green-700"}`}>{message.text}</p>}
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={includeTests} onChange={(e) => setIncludeTests(e.target.checked)} />
-          Include test files (left out by default: M-23-02 covers cryptography in active use)
-        </label>
-
-        {rows.length === 0 ? (
-          <p className="text-sm text-gray-500">No quantum-vulnerable cryptographic systems to report from this scan.</p>
-        ) : (
-          <TableShell columns={["Algorithm", "Service", "Key length", "Occurrences", "Target phase"]}>
-            {rows.map((r) => (
-              <tr key={`${r.algorithm}|${r.service}|${r.keyLength}`}>
-                <td className="border-b border-gray-100 px-4 py-3 text-sm text-gray-800">{r.algorithm}</td>
-                <td className="border-b border-gray-100 px-4 py-3 text-sm text-gray-700">{r.service}</td>
-                <td className="border-b border-gray-100 px-4 py-3 text-sm text-gray-700">{r.keyLength}</td>
-                <td className="border-b border-gray-100 px-4 py-3 text-sm text-gray-700">{r.occurrences}</td>
-                <td className="border-b border-gray-100 px-4 py-3 text-sm text-gray-700">{r.target}</td>
-              </tr>
-            ))}
-          </TableShell>
-        )}
-
         <div className="flex flex-wrap justify-end gap-2">
           <DownloadButton
             label="Inventory (CSV)"
-            value={inventoryCsv(rows, system, at, source)}
+            value={inventoryCsv(inv, system, at, source)}
             filename={`${fileStem}.csv`}
             mimeType="text/csv"
           />
           <DownloadButton
             label="Inventory (JSON)"
-            value={inventoryJson(rows, system, at, source)}
+            value={inventoryJson(inv, system, at, source)}
             filename={`${fileStem}.json`}
             mimeType="application/json"
           />
         </div>
       </div>
     </SectionPanel>
+  );
+}
+
+/** One inventory row, which opens to show where it was found. */
+function RowView({
+  row,
+  open,
+  onToggle,
+  onExcludeRow,
+  onExcludeFile,
+  onRemove,
+}: {
+  row: InventoryRow;
+  open: boolean;
+  onToggle: () => void;
+  onExcludeRow: () => void;
+  onExcludeFile: (file: string) => void;
+  onRemove: () => void;
+}) {
+  const files = [...new Set(row.locations.map(fileOf))];
+  return (
+    <>
+      <tr>
+        <td className={`${cellClass} text-gray-800`}>
+          {row.algorithm}
+          {row.origin === "added" && <span className="ml-2 text-xs text-gray-400">added</span>}
+        </td>
+        <td className={cellClass}>{row.service}</td>
+        <td className={cellClass}>{row.keyLength}</td>
+        <td className={cellClass}>{row.occurrences}</td>
+        <td className={cellClass}>{row.target}</td>
+        <td className={cellClass}>
+          <div className="flex justify-end gap-2">
+            <LRButton type="button" variant="secondary-outline" onClick={onToggle}>
+              {open ? "Hide" : "Where"}
+            </LRButton>
+            {row.origin === "added" ? (
+              <LRButton type="button" variant="danger-outline" onClick={onRemove}>
+                Remove
+              </LRButton>
+            ) : (
+              <LRButton type="button" variant="secondary-outline" onClick={onExcludeRow}>
+                Exclude
+              </LRButton>
+            )}
+          </div>
+        </td>
+      </tr>
+      {open && (
+        <tr>
+          <td colSpan={6} className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+            {row.origin === "added" ? (
+              <p className="text-sm text-gray-700">{row.locations[0]}</p>
+            ) : (
+              <ul className="space-y-1">
+                {files.slice(0, MAX_SHOWN).map((file) => (
+                  <li key={file} className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0 break-all font-mono text-xs text-gray-600">
+                      {row.locations.filter((l) => fileOf(l) === file).join(", ")}
+                    </span>
+                    <LRButton type="button" variant="secondary-outline" onClick={() => onExcludeFile(file)}>
+                      Exclude this file
+                    </LRButton>
+                  </li>
+                ))}
+                {files.length > MAX_SHOWN && (
+                  <li className="text-xs text-gray-500">and {files.length - MAX_SHOWN} more files</li>
+                )}
+              </ul>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }

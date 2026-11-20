@@ -2,17 +2,18 @@
 
 import { getSession } from "@/lib/auth/session";
 import { compareFindings, type Comparison } from "@/lib/qsearch/compare";
-import { cleanSystem, type SystemDetails } from "@/lib/qsearch/inventory";
+import { cleanReview, cleanSystem, type Review, type SystemDetails } from "@/lib/qsearch/inventory";
 import { keyDetails, type CertificateDetails, type KeySource } from "@/lib/qsearch/enrich";
 import { redactDetail } from "@/lib/qsearch/redact";
 import { CheckError, checkServer, serverFindings, type ServerCheck } from "@/lib/qsearch/serverCheck";
+import { checkProvider, type ProviderCheck } from "@/lib/qsearch/identityProvider";
 import {
   deleteScan as deleteStoredScan,
   getScan,
   listScans,
   previousScan,
   saveScan,
-  updateSystem,
+  updateInventory,
   type ScanSummary,
 } from "@/lib/qsearch/scanStore";
 import { execFile } from "child_process";
@@ -83,7 +84,10 @@ export type SavedScan = {
   /** Changes since the previous scan of the same project; null for the first. */
   comparison: Comparison | null;
   /** Information system details for the federal inventory, if entered. */
+  /** Information system details for the federal inventory, if entered. */
   system: SystemDetails | null;
+  /** The user's review of the inventory, if any. */
+  review: Review | null;
 };
 
 /** `saved` is null when the scan could not be saved to history. */
@@ -300,19 +304,26 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
  * Saves a finished scan and compares it with the previous scan of the same
  * project. A database failure returns null: the user still gets the results.
  */
+/** Storage is used only when Supabase is configured; otherwise it is skipped at once. */
+const STORAGE_ON = !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 async function save(owner: string, fileName: string, data: ScanData): Promise<SavedScan | null> {
+  if (!STORAGE_ON) return null;
   const project = projectOf(fileName);
   try {
     const previous = await previousScan(owner, project);
     // System details carry over from the previous scan of the same project.
+    // System details and review carry over from the previous scan of the same project.
     const system = previous?.system ?? null;
-    const { id, createdAt } = await saveScan(owner, project, fileName, data, system);
+    const review = previous?.review ?? null;
+    const { id, createdAt } = await saveScan(owner, project, fileName, data, system, review);
     return {
       id,
       project,
       createdAt,
       comparison: previous ? compareFindings(previous.findings, data.findings, previous.createdAt) : null,
       system,
+      review,
     };
   } catch {
     return null;
@@ -324,6 +335,7 @@ const STORE_FAILED = "Your scan history could not be reached. Try again shortly.
 export async function listScanHistory(): Promise<{ ok: true; scans: ScanSummary[] } | Failure> {
   const owner = await currentOwner();
   if (!owner) return SIGNED_OUT;
+  if (!STORAGE_ON) return { ok: false, error: "Scan history is not set up yet." };
   try {
     return { ok: true, scans: await listScans(owner) };
   } catch {
@@ -350,6 +362,7 @@ export async function openScan(id: unknown): Promise<QSearchResponse> {
           createdAt: stored.createdAt,
           comparison: previous ? compareFindings(previous.findings, stored.scan.findings, previous.createdAt) : null,
           system: stored.system,
+          review: stored.review,
         },
       },
     };
@@ -408,15 +421,39 @@ export async function runServerCheck(
   }
 }
 
-/** Saves the information system details entered for a saved scan. */
-export async function saveSystemDetails(id: unknown, details: unknown): Promise<{ ok: true; system: SystemDetails } | Failure> {
+/** Saves the system details and review entered for a saved scan. Both are validated here. */
+export async function saveInventory(
+  id: unknown,
+  details: unknown,
+  reviewInput: unknown,
+): Promise<{ ok: true; system: SystemDetails; review: Review } | Failure> {
   const owner = await currentOwner();
   if (!owner) return SIGNED_OUT;
   if (typeof id !== "string" || !UUID.test(id)) return { ok: false, error: "That scan was not found." };
   const system = cleanSystem(details);
+  const review = cleanReview(reviewInput);
   try {
-    return (await updateSystem(owner, id, system)) ? { ok: true, system } : { ok: false, error: "That scan was not found." };
+    return (await updateInventory(owner, id, system, review))
+      ? { ok: true, system, review }
+      : { ok: false, error: "That scan was not found." };
   } catch {
     return { ok: false, error: STORE_FAILED };
+  }
+}
+
+/** Reads a sign-in provider's published signing keys. */
+export async function runProviderCheck(input: unknown): Promise<{ ok: true; data: ProviderCheck } | Failure> {
+  const owner = await currentOwner();
+  if (!owner) return SIGNED_OUT;
+  if (typeof input !== "string") return { ok: false, error: "Enter a sign-in provider's address." };
+  if (rateLimited(owner, "check")) {
+    return { ok: false, error: `You can run up to ${PER_MINUTE} checks a minute. Try again shortly.` };
+  }
+  try {
+    return { ok: true, data: await checkProvider(input) };
+  } catch (e) {
+    if (e instanceof CheckError) return { ok: false, error: e.message };
+    console.error("Provider check failed:", e);
+    return { ok: false, error: "The sign-in provider could not be checked." };
   }
 }
