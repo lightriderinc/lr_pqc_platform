@@ -7,6 +7,7 @@ import { keyDetails, type CertificateDetails, type KeySource } from "@/lib/qsear
 import { redactDetail } from "@/lib/qsearch/redact";
 import { CheckError, checkServer, serverFindings, type ServerCheck } from "@/lib/qsearch/serverCheck";
 import { checkProvider, type ProviderCheck } from "@/lib/qsearch/identityProvider";
+import { auditDomain, challengeFor, realDeps, type Challenge, type DomainAudit } from "@/lib/qsearch/domainAudit";
 import {
   deleteScan as deleteStoredScan,
   getScan,
@@ -386,11 +387,14 @@ export async function deleteScan(id: unknown): Promise<{ ok: true } | Failure> {
 const PER_MINUTE = 10;
 const recent = new Map<string, number[]>();
 
-function rateLimited(owner: string, kind: "scan" | "check"): boolean {
+/** Domain audits run many handshakes each, so they have a lower limit. */
+const AUDITS_PER_MINUTE = 2;
+
+function rateLimited(owner: string, kind: "scan" | "check" | "audit"): boolean {
   const key = `${kind}:${owner}`;
   const now = Date.now();
   const times = (recent.get(key) ?? []).filter((t) => now - t < 60_000);
-  if (times.length >= PER_MINUTE) return true;
+  if (times.length >= (kind === "audit" ? AUDITS_PER_MINUTE : PER_MINUTE)) return true;
   times.push(now);
   recent.set(key, times);
   return false;
@@ -455,5 +459,29 @@ export async function runProviderCheck(input: unknown): Promise<{ ok: true; data
     if (e instanceof CheckError) return { ok: false, error: e.message };
     console.error("Provider check failed:", e);
     return { ok: false, error: "The sign-in provider could not be checked." };
+  }
+}
+
+/**
+ * Audits a domain from outside. Full results only when the domain carries
+ * this person's ownership record; the record to add is always returned.
+ */
+export async function runDomainAudit(
+  input: unknown,
+): Promise<{ ok: true; data: { audit: DomainAudit; challenge: Challenge | null } } | Failure> {
+  const owner = await currentOwner();
+  if (!owner) return SIGNED_OUT;
+  if (typeof input !== "string") return { ok: false, error: "Enter a domain, such as example.com." };
+  if (rateLimited(owner, "audit")) {
+    return { ok: false, error: `You can run up to ${AUDITS_PER_MINUTE} domain audits a minute. Try again shortly.` };
+  }
+  try {
+    const deps = realDeps();
+    const audit = await auditDomain(owner, input, deps);
+    return { ok: true, data: { audit, challenge: deps.secret ? challengeFor(owner, audit.domain, deps.secret) : null } };
+  } catch (e) {
+    if (e instanceof CheckError) return { ok: false, error: e.message };
+    console.error("Domain audit failed:", e);
+    return { ok: false, error: "The domain could not be audited." };
   }
 }

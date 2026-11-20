@@ -3,6 +3,7 @@
 import ScanConsole, { type ScanResult } from "@/components/veloce/ScanConsole";
 import ScanHistory from "@/components/veloce/ScanHistory";
 import ScanResults from "@/components/veloce/ScanResults";
+import DomainAudit from "@/components/veloce/DomainAudit";
 import ServerCheck from "@/components/veloce/ServerCheck";
 import { useState } from "react";
 
@@ -28,6 +29,7 @@ export default function QSearchPage() {
       </div>
       <ScanResults key={run} result={result} />
       <ScanHistory refreshKey={savedId} activeId={savedId} onOpen={show} onClear={() => show(null)} />
+      <DomainAudit />
       <ServerCheck />
     </div>
   );
