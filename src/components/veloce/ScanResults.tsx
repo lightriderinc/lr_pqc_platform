@@ -7,11 +7,13 @@ import Modal from "@/components/ui/Modal";
 import SectionPanel from "@/components/ui/SectionPanel";
 import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
+import FixPlan from "./FixPlan";
 import InventoryExport from "./InventoryExport";
 import ScanAlerts from "./ScanAlerts";
 import ScanComparison from "./ScanComparison";
 import { keyLabel } from "@/lib/qsearch/algorithms";
 import { buildCbom } from "@/lib/qsearch/cbom";
+import { fixFor } from "@/lib/qsearch/fixes";
 import { TAGS, isComment, isTestPath, tagsOf } from "@/lib/qsearch/tags";
 import { useMemo, useState } from "react";
 import {
@@ -192,7 +194,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
             {completedAt.toLocaleTimeString()}
           </Badge>
         }
-        cardStyle= "p-0 mb-8"
+        cardStyle="p-0 mb-8"
 
       >
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
@@ -234,7 +236,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
 
       <ScanComparison saved={result.saved} />
 
-            <InventoryExport result={result} at={completedAt} />
+      <FixPlan findings={result.findings} at={completedAt} />
+
+      <InventoryExport result={result} at={completedAt} />
 
       <SectionPanel
         title="Observed cryptography"
@@ -432,15 +436,21 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                     .map((t) => TAGS[t].note)
                     .join(" "),
                 },
+                {
+                  label: "How to fix",
+                  value: (() => {
+                    const fix = fixFor(activeFinding, completedAt);
+                    return fix ? `${fix.title}. Steps and an example are in the fix plan.` : "";
+                  })(),
+                },
               ] as const
             )
               .filter((row) => row.value)
               .map((row, i, arr) => (
                 <div
                   key={row.label}
-                  className={`grid grid-cols-[120px_1fr] gap-x-4 px-4 py-3 ${
-                    i === arr.length - 1 ? "" : "border-b-2 border-gray-50"
-                  }`}
+                  className={`grid grid-cols-[120px_1fr] gap-x-4 px-4 py-3 ${i === arr.length - 1 ? "" : "border-b-2 border-gray-50"
+                    }`}
                 >
                   <dt className="text-xs flex items-center uppercase font-medium tracking-wide text-gray-400">
                     {row.label}
