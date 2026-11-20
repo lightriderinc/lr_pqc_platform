@@ -5,7 +5,7 @@
 
 import type { ScanData } from "@/app/qsearch/actions";
 import type { ComparableFinding } from "@/lib/qsearch/compare";
-import { cleanSystem, type SystemDetails } from "@/lib/qsearch/inventory";
+import { cleanReview, cleanSystem, type Review, type SystemDetails } from "@/lib/qsearch/inventory";
 import { supabase } from "@/lib/supabase/client";
 
 const TABLE = "qsearch_scans";
@@ -62,6 +62,7 @@ export async function saveScan(
   fileName: string,
   scan: ScanData,
   system: SystemDetails | null,
+  review: Review | null,
 ): Promise<{ id: string; createdAt: string }> {
   const { data, error } = await supabase
     .from(TABLE)
@@ -76,6 +77,7 @@ export async function saveScan(
       findings: scan.findings,
       reports: scan.reports,
       system,
+      review,
     })
     .select("id, created_at")
     .single();
@@ -109,13 +111,27 @@ export async function previousScan(
   ownerId: string,
   project: string,
   before?: string,
-): Promise<{ createdAt: string; findings: ComparableFinding[]; system: SystemDetails | null } | null> {
-  let query = supabase.from(TABLE).select("created_at, findings, system").eq("owner_id", ownerId).eq("project", project);
+): Promise<{
+  createdAt: string;
+  findings: ComparableFinding[];
+  system: SystemDetails | null;
+  review: Review | null;
+} | null> {
+  let query = supabase
+    .from(TABLE)
+    .select("created_at, findings, system, review")
+    .eq("owner_id", ownerId)
+    .eq("project", project);
   if (before) query = query.lt("created_at", before);
   const { data, error } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (error) fail("previous", error);
   return data
-    ? { createdAt: data.created_at, findings: data.findings, system: data.system ? cleanSystem(data.system) : null }
+    ? {
+        createdAt: data.created_at,
+        findings: data.findings,
+        system: data.system ? cleanSystem(data.system) : null,
+        review: data.review ? cleanReview(data.review) : null,
+      }
     : null;
 }
 
@@ -133,19 +149,20 @@ export async function listScans(ownerId: string): Promise<ScanSummary[]> {
 export async function getScan(
   ownerId: string,
   id: string,
-): Promise<(ScanSummary & { scan: ScanData; system: SystemDetails | null }) | null> {
+): Promise<(ScanSummary & { scan: ScanData; system: SystemDetails | null; review: Review | null }) | null> {
   const { data, error } = await supabase
     .from(TABLE)
-    .select(`${SUMMARY_COLUMNS}, findings, reports, system`)
+    .select(`${SUMMARY_COLUMNS}, findings, reports, system, review`)
     .eq("owner_id", ownerId)
     .eq("id", id)
     .maybeSingle();
   if (error) fail("get", error);
   if (!data) return null;
-  const row = data as SummaryRow & Pick<ScanData, "findings" | "reports"> & { system: unknown };
+  const row = data as SummaryRow & Pick<ScanData, "findings" | "reports"> & { system: unknown; review: unknown };
   return {
     ...toSummary(row),
     system: row.system ? cleanSystem(row.system) : null,
+    review: row.review ? cleanReview(row.review) : null,
     scan: {
       files_scanned: row.files_scanned,
       quantum_vulnerable: row.quantum_vulnerable,
@@ -164,14 +181,19 @@ export async function deleteScan(ownerId: string, id: string): Promise<boolean> 
   return data.length > 0;
 }
 
-/** Returns false when no scan with this id belongs to the owner. */
-export async function updateSystem(ownerId: string, id: string, system: SystemDetails): Promise<boolean> {
+/** Saves system details and review. Returns false when no scan with this id belongs to the owner. */
+export async function updateInventory(
+  ownerId: string,
+  id: string,
+  system: SystemDetails,
+  review: Review,
+): Promise<boolean> {
   const { data, error } = await supabase
     .from(TABLE)
-    .update({ system })
+    .update({ system, review })
     .eq("owner_id", ownerId)
     .eq("id", id)
     .select("id");
-  if (error) fail("update system", error);
+  if (error) fail("update inventory", error);
   return data.length > 0;
 }
