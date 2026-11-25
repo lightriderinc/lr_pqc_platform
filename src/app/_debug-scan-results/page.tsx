@@ -9,7 +9,7 @@ const mockResult: ScanResult = {
   high_risk: 6,
   pqc_ready: 3,
       reports: { csv: "", summary: "" },
-      saved: null,
+      project: "debug-sample",
   findings: Array.from({ length: 12 }, (_, i) => ({
     algorithm: i % 2 === 0 ? "RSA-2048" : "ML-KEM-768 (Kyber)",
     classification:

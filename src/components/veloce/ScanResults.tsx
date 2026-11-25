@@ -10,7 +10,6 @@ import TableShell from "@/components/ui/TableShell";
 import FixPlan from "./FixPlan";
 import InventoryExport from "./InventoryExport";
 import ScanAlerts from "./ScanAlerts";
-import ScanComparison from "./ScanComparison";
 import { keyLabel } from "@/lib/qsearch/algorithms";
 import { buildCbom } from "@/lib/qsearch/cbom";
 import { fixFor } from "@/lib/qsearch/fixes";
@@ -109,10 +108,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
   const [hideTests, setHideTests] = useState(false);
   const [showComments, setShowComments] = useState(false);
 
-  const completedAt = useMemo(
-    () => (result?.saved ? new Date(result.saved.createdAt) : new Date()),
-    [result],
-  );
+  // Scans are not stored, so the time this result is first shown is the scan's
+  // time. The page remounts this panel for every new result.
+  const [completedAt] = useState(() => new Date());
 
   // A new serial number each time the scan is shown, as CycloneDX requires per BOM.
   const cbom = useMemo(
@@ -121,7 +119,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
       JSON.stringify(
         // The CBOM lists cryptography in code and files, not mentions in comments.
         buildCbom(result.findings.filter((f) => !isComment(f)), {
-          project: result.saved?.project ?? "qSearch scan",
+          project: result.project,
           timestamp: completedAt.toISOString(),
           serial: crypto.randomUUID(),
         }),
@@ -235,8 +233,6 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
       </SectionPanel>
 
       <ScanAlerts findings={result.findings} at={completedAt} />
-
-      <ScanComparison saved={result.saved} />
 
       <FixPlan findings={result.findings} at={completedAt} />
 

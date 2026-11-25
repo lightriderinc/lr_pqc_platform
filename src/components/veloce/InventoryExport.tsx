@@ -1,6 +1,5 @@
 "use client";
 
-import { saveInventory } from "@/app/qsearch/actions";
 import Badge from "@/components/ui/Badge";
 import AutoFill from "./AutoFill";
 import DownloadButton from "@/components/ui/DownloadButton";
@@ -69,16 +68,14 @@ const EMPTY_ADD = { algorithm: "RSA", service: "digital signatures", keyLength: 
  * added from sources a code scan cannot see.
  */
 export default function InventoryExport({ result, at }: { result: ScanResult; at: Date }) {
-  const [form, setForm] = useState<Form>(() => toForm(result.saved?.system ?? EMPTY_SYSTEM));
-  const [review, setReview] = useState<Review>(() => result.saved?.review ?? EMPTY_REVIEW);
+  const [form, setForm] = useState<Form>(() => toForm(EMPTY_SYSTEM));
+  const [review, setReview] = useState<Review>(EMPTY_REVIEW);
   const [includeTests, setIncludeTests] = useState(false);
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [reason, setReason] = useState<Exclusion["reason"]>(EXCLUDE_REASONS[0]);
   const [reasonNote, setReasonNote] = useState("");
   const [adding, setAdding] = useState(EMPTY_ADD);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   const system = useMemo(() => cleanSystem(form), [form]);
   const inv = useMemo(
@@ -87,20 +84,17 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
   );
   const priority = isPriority(system, at);
   const missing = missingItems(system);
-  const project = result.saved?.project;
   const stamp = at.toISOString().slice(0, 10);
-  const source = project ? `qSearch scan of ${project}, ${stamp}` : `qSearch scan, ${stamp} (not saved)`;
-  const fileStem = `inventory-${project ?? "unsaved"}-${stamp}`;
+  const source = `qSearch scan of ${result.project}, ${stamp}`;
+  const fileStem = `inventory-${result.project}-${stamp}`;
 
-  /** Every change goes through cleanReview, so limits hold before saving too. */
+  /** Every change goes through cleanReview, so the same limits hold as in the downloads. */
   function changeReview(next: Review) {
     setReview(cleanReview(next));
-    setMessage(null);
   }
 
   const set = (key: keyof SystemDetails) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
-    setMessage(null);
   };
 
   function startExclusion(p: Pending) {
@@ -132,23 +126,6 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
     if (!adding.source.trim()) return;
     changeReview({ ...review, additions: [...review.additions, adding as Review["additions"][number]] });
     setAdding(EMPTY_ADD);
-  }
-
-  async function save() {
-    if (!result.saved) return;
-    setSaving(true);
-    try {
-      const response = await saveInventory(result.saved.id, system, review);
-      setMessage(
-        response.ok
-          ? { text: `Saved. Later scans of ${project} will start with these details and this review.`, error: false }
-          : { text: response.error, error: true },
-      );
-    } catch {
-      setMessage({ text: "The inventory did not reach the server. Check your connection and try again.", error: true });
-    } finally {
-      setSaving(false);
-    }
   }
 
   return (
@@ -410,19 +387,10 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
           </LRButton>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {result.saved ? (
-            <LRButton type="button" variant="secondary-outline" onClick={save} disabled={saving}>
-              {saving ? "Saving…" : "Save inventory"}
-            </LRButton>
-          ) : (
-            <p className="text-sm text-gray-500">
-              This scan is not saved, so these details and this review are lost when you leave the page. They are still
-              included in the downloads.
-            </p>
-          )}
-          {message && <p className={`text-sm ${message.error ? "text-red-600" : "text-green-700"}`}>{message.text}</p>}
-        </div>
+        <p className="text-sm text-gray-500">
+          Nothing here is stored. Download the inventory before you leave the page: these details and this review are
+          included in the downloads.
+        </p>
 
         <div className="flex flex-wrap justify-end gap-2">
           <DownloadButton

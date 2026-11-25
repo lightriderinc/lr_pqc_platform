@@ -1,8 +1,6 @@
 "use server";
 
 import { getSession } from "@/lib/auth/session";
-import { compareFindings, type Comparison } from "@/lib/qsearch/compare";
-import { cleanReview, cleanSystem, type Review, type SystemDetails } from "@/lib/qsearch/inventory";
 import { keyDetails, type CertificateDetails, type KeySource } from "@/lib/qsearch/enrich";
 import { redactDetail } from "@/lib/qsearch/redact";
 import { CheckError, checkServer, serverFindings, type ServerCheck } from "@/lib/qsearch/serverCheck";
@@ -10,15 +8,6 @@ import { checkProvider, type ProviderCheck } from "@/lib/qsearch/identityProvide
 import { sha256Hex, type SignedResult } from "@/lib/qsearch/attestation";
 import { signResult, signingPublicKey } from "@/lib/qsearch/signing";
 import { auditDomain, challengeFor, realDeps, type Challenge, type DomainAudit } from "@/lib/qsearch/domainAudit";
-import {
-  deleteScan as deleteStoredScan,
-  getScan,
-  listScans,
-  previousScan,
-  saveScan,
-  updateInventory,
-  type ScanSummary,
-} from "@/lib/qsearch/scanStore";
 import { execFile } from "child_process";
 import { randomBytes } from "crypto";
 import { unzipSync } from "fflate";
@@ -54,7 +43,7 @@ const REPORT_FILES = {
 
 export type ScanReports = Record<keyof typeof REPORT_FILES, string>;
 
-/** A scan as qSearch produced it: what is saved to history. */
+/** A scan as qSearch produced it. Nothing is stored: results live only in the page. */
 export type ScanData = {
   files_scanned: number;
   quantum_vulnerable: number;
@@ -70,7 +59,7 @@ export type ScanData = {
     service: string;
     provenance: string;
     confidence: string;
-    /** Added by the website from the scanned files. Absent on older saved scans. */
+    /** Added by the website from the scanned files. */
     keyBits?: number | null;
     parameterSet?: string | null;
     keySource?: KeySource | null;
@@ -79,23 +68,12 @@ export type ScanData = {
   reports: ScanReports;
 };
 
-/** Where a scan sits in the user's history. */
-export type SavedScan = {
-  id: string;
+export type ScanResult = ScanData & {
+  /** Named after the uploaded file, for report and download names. */
   project: string;
-  createdAt: string;
-  /** Changes since the previous scan of the same project; null for the first. */
-  /** Changes since the previous scan of the same project; null for the first. */
-  comparison: Comparison | null;
-  /** Information system details for the federal inventory, if entered. */
-  /** Information system details for the federal inventory, if entered. */
-  system: SystemDetails | null;
-  /** The user's review of the inventory, if any. */
-  review: Review | null;
+  /** The findings, signed at scan time; null when signing is not set up. */
+  signed?: SignedResult | null;
 };
-
-/** `saved` is null when the scan could not be saved to history. */
-export type ScanResult = ScanData & { signed?: SignedResult | null; saved: SavedScan | null };
 
 type Failure = { ok: false; error: string; authRequired?: boolean };
 type QSearchResponse = { ok: true; data: ScanResult } | Failure;
@@ -116,14 +94,12 @@ async function currentOwner(): Promise<string | null> {
 const safeFileName = (name: string) => basename(name.replace(/\\/g, "/")).replace(/[^\w.-]/g, "_").slice(0, 120);
 
 /**
- * Scans of files with the same name, minus extension, are compared. A
- * browser's duplicate-download suffix, such as " (1)" (saved as "__1_"),
- * is ignored so a re-downloaded ZIP still matches its project.
+ * The project name used in report and download names: the file name without
+ * its extension. A browser's duplicate-download suffix, such as " (1)"
+ * (saved as "__1_"), is dropped, so a re-downloaded ZIP keeps its name.
  */
 const projectOf = (fileName: string) =>
   fileName.replace(/\.[^.]*$/, "").replace(/__\d+_$/, "") || fileName;
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Error with a message that is safe to show to the user. */
 class UserError extends Error { }
@@ -297,7 +273,7 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
       { fileName: file.name.slice(0, 200), uploadSha256, bytes: bytes.length, scanner: `qSearch ${raw.tool_version ?? "unknown"}` },
       { files_scanned: data.files_scanned, quantum_vulnerable: data.quantum_vulnerable, high_risk: data.high_risk, pqc_ready: data.pqc_ready, findings: data.findings },
     );
-    return { ok: true, data: { ...data, signed, saved: await save(owner, safeFileName(file.name), data) } };
+    return { ok: true, data: { ...data, project: projectOf(safeFileName(file.name)), signed } };
   } catch (err: unknown) {
     if (err instanceof UserError) return { ok: false, error: err.message };
     // Details stay in the server log; the user sees a message with no paths.
@@ -309,88 +285,6 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
     };
   } finally {
     await rm(tmp, { recursive: true, force: true }).catch(() => { });
-  }
-}
-
-/**
- * Saves a finished scan and compares it with the previous scan of the same
- * project. A database failure returns null: the user still gets the results.
- */
-/** Storage is used only when Supabase is configured; otherwise it is skipped at once. */
-const STORAGE_ON = !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-async function save(owner: string, fileName: string, data: ScanData): Promise<SavedScan | null> {
-  if (!STORAGE_ON) return null;
-  const project = projectOf(fileName);
-  try {
-    const previous = await previousScan(owner, project);
-    // System details carry over from the previous scan of the same project.
-    // System details and review carry over from the previous scan of the same project.
-    const system = previous?.system ?? null;
-    const review = previous?.review ?? null;
-    const { id, createdAt } = await saveScan(owner, project, fileName, data, system, review);
-    return {
-      id,
-      project,
-      createdAt,
-      comparison: previous ? compareFindings(previous.findings, data.findings, previous.createdAt) : null,
-      system,
-      review,
-    };
-  } catch {
-    return null;
-  }
-}
-
-const STORE_FAILED = "Your scan history could not be reached. Try again shortly.";
-
-export async function listScanHistory(): Promise<{ ok: true; scans: ScanSummary[] } | Failure> {
-  const owner = await currentOwner();
-  if (!owner) return SIGNED_OUT;
-  if (!STORAGE_ON) return { ok: false, error: "Scan history is not set up yet." };
-  try {
-    return { ok: true, scans: await listScans(owner) };
-  } catch {
-    return { ok: false, error: STORE_FAILED };
-  }
-}
-
-/** Reopens a saved scan, with its comparison to the scan before it. */
-export async function openScan(id: unknown): Promise<QSearchResponse> {
-  const owner = await currentOwner();
-  if (!owner) return SIGNED_OUT;
-  if (typeof id !== "string" || !UUID.test(id)) return { ok: false, error: "That scan was not found." };
-  try {
-    const stored = await getScan(owner, id);
-    if (!stored) return { ok: false, error: "That scan was not found." };
-    const previous = await previousScan(owner, stored.project, stored.createdAt);
-    return {
-      ok: true,
-      data: {
-        ...stored.scan,
-        saved: {
-          id: stored.id,
-          project: stored.project,
-          createdAt: stored.createdAt,
-          comparison: previous ? compareFindings(previous.findings, stored.scan.findings, previous.createdAt) : null,
-          system: stored.system,
-          review: stored.review,
-        },
-      },
-    };
-  } catch {
-    return { ok: false, error: STORE_FAILED };
-  }
-}
-
-export async function deleteScan(id: unknown): Promise<{ ok: true } | Failure> {
-  const owner = await currentOwner();
-  if (!owner) return SIGNED_OUT;
-  if (typeof id !== "string" || !UUID.test(id)) return { ok: false, error: "That scan was not found." };
-  try {
-    return (await deleteStoredScan(owner, id)) ? { ok: true } : { ok: false, error: "That scan was not found." };
-  } catch {
-    return { ok: false, error: STORE_FAILED };
   }
 }
 
@@ -441,27 +335,6 @@ export async function runServerCheck(
   }
 }
 
-/** Saves the system details and review entered for a saved scan. Both are validated here. */
-export async function saveInventory(
-  id: unknown,
-  details: unknown,
-  reviewInput: unknown,
-): Promise<{ ok: true; system: SystemDetails; review: Review } | Failure> {
-  const owner = await currentOwner();
-  if (!owner) return SIGNED_OUT;
-  if (typeof id !== "string" || !UUID.test(id)) return { ok: false, error: "That scan was not found." };
-  const system = cleanSystem(details);
-  const review = cleanReview(reviewInput);
-  try {
-    return (await updateInventory(owner, id, system, review))
-      ? { ok: true, system, review }
-      : { ok: false, error: "That scan was not found." };
-  } catch {
-    return { ok: false, error: STORE_FAILED };
-  }
-}
-
-/** Reads a sign-in provider's published signing keys. */
 export async function runProviderCheck(input: unknown): Promise<{ ok: true; data: ProviderCheck } | Failure> {
   const owner = await currentOwner();
   if (!owner) return SIGNED_OUT;
