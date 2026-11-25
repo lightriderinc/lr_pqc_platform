@@ -51,7 +51,7 @@ export interface ServerCheck {
 }
 
 /** Error with a message that is safe to show to the user. */
-export class CheckError extends Error {}
+export class CheckError extends Error { }
 
 // ---------- target validation ----------
 
@@ -162,7 +162,7 @@ function tlv(b: Uint8Array, pos: number, limit: number): Node | null {
 function children(b: Uint8Array, node: Node | null): Node[] {
   const out: Node[] = [];
   if (!node) return out;
-  for (let pos = node.start; pos < node.end; ) {
+  for (let pos = node.start; pos < node.end;) {
     const child = tlv(b, pos, node.end);
     if (!child) return [];
     out.push(child);
@@ -236,6 +236,12 @@ function signatureAlgorithm(der: Uint8Array): string {
   return SIGNATURES[oid] ?? (oid ? `Unknown (${oid})` : "Unknown");
 }
 
+/** An ISO date, or "" when a certificate's date cannot be read. */
+function isoDate(text: string): string {
+  const d = new Date(text);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 function chainOf(peer: DetailedPeerCertificate): CertInfo[] {
   const chain: CertInfo[] = [];
   const seen = new Set<string>();
@@ -248,8 +254,8 @@ function chainOf(peer: DetailedPeerCertificate): CertInfo[] {
       issuer: x.issuer.split("\n").join(", "),
       keyAlgorithm: keyAlgorithm(x, der),
       signatureAlgorithm: signatureAlgorithm(der),
-      notValidBefore: new Date(x.validFrom).toISOString(),
-      notValidAfter: new Date(x.validTo).toISOString(),
+      notValidBefore: isoDate(x.validFrom),
+      notValidAfter: isoDate(x.validTo),
       fingerprint: x.fingerprint256.replace(/:/g, "").toLowerCase(),
     });
     if (chain.length >= 10) break;

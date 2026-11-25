@@ -7,11 +7,13 @@ import Modal from "@/components/ui/Modal";
 import SectionPanel from "@/components/ui/SectionPanel";
 import StatCard from "@/components/ui/StatCard";
 import TableShell from "@/components/ui/TableShell";
+import FixPlan from "./FixPlan";
 import InventoryExport from "./InventoryExport";
 import ScanAlerts from "./ScanAlerts";
 import ScanComparison from "./ScanComparison";
 import { keyLabel } from "@/lib/qsearch/algorithms";
 import { buildCbom } from "@/lib/qsearch/cbom";
+import { fixFor } from "@/lib/qsearch/fixes";
 import { TAGS, isComment, isTestPath, tagsOf } from "@/lib/qsearch/tags";
 import { useMemo, useState } from "react";
 import {
@@ -177,7 +179,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
     { label: "CBOM (CycloneDX 1.6)", value: cbom ?? "", filename: `qsearch-cbom-${stamp}.cdx.json`, mimeType: "application/json" },
     { label: "Findings (CSV)", value: reports.csv, filename: `qsearch-findings-${stamp}.csv`, mimeType: "text/csv" },
     { label: "Executive summary", value: reports.summary, filename: `qsearch-summary-${stamp}.txt`, mimeType: "text/plain" },
-    { label: "Findings (JSON)", value: JSON.stringify(scan, null, 2), filename: `qsearch-findings-${stamp}.json`, mimeType: "application/json" },
+    result.signed
+      ? { label: "Findings (JSON, signed)", value: JSON.stringify(result.signed, null, 2), filename: `qsearch-findings-signed-${stamp}.json`, mimeType: "application/json" }
+      : { label: "Findings (JSON)", value: JSON.stringify(scan, null, 2), filename: `qsearch-findings-${stamp}.json`, mimeType: "application/json" },
   ].filter((d) => d.value);
 
   return (
@@ -192,7 +196,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
             {completedAt.toLocaleTimeString()}
           </Badge>
         }
-        cardStyle= "p-0 mb-8"
+        cardStyle="p-0 mb-8"
 
       >
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
@@ -234,14 +238,16 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
 
       <ScanComparison saved={result.saved} />
 
-            <InventoryExport result={result} at={completedAt} />
+      <FixPlan findings={result.findings} at={completedAt} />
+
+      <InventoryExport result={result} at={completedAt} />
 
       <SectionPanel
         title="Observed cryptography"
         action={
           <Badge>
             {sortedFindings.length === result.findings.length
-              ? `${result.findings.length} findings`
+              ? `${result.findings.length} ${result.findings.length === 1 ? "finding" : "findings"}`
               : `${sortedFindings.length} of ${result.findings.length} findings`}
           </Badge>
         }
@@ -418,7 +424,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                 {
                   label: "Valid until",
                   value: activeFinding.certificate
-                    ? new Date(activeFinding.certificate.notValidAfter).toLocaleString()
+                    ? activeFinding.certificate.notValidAfter
+                      ? new Date(activeFinding.certificate.notValidAfter).toLocaleString()
+                      : "Unreadable date in the certificate"
                     : "",
                 },
                 { label: "Confidence", value: activeFinding.confidence },
@@ -432,15 +440,21 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                     .map((t) => TAGS[t].note)
                     .join(" "),
                 },
+                {
+                  label: "How to fix",
+                  value: (() => {
+                    const fix = fixFor(activeFinding, completedAt);
+                    return fix ? `${fix.title}. Steps and an example are in the fix plan.` : "";
+                  })(),
+                },
               ] as const
             )
               .filter((row) => row.value)
               .map((row, i, arr) => (
                 <div
                   key={row.label}
-                  className={`grid grid-cols-[120px_1fr] gap-x-4 px-4 py-3 ${
-                    i === arr.length - 1 ? "" : "border-b-2 border-gray-50"
-                  }`}
+                  className={`grid grid-cols-[120px_1fr] gap-x-4 px-4 py-3 ${i === arr.length - 1 ? "" : "border-b-2 border-gray-50"
+                    }`}
                 >
                   <dt className="text-xs flex items-center uppercase font-medium tracking-wide text-gray-400">
                     {row.label}
