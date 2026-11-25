@@ -158,15 +158,11 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
     >
       <div className="space-y-6">
         <p className="text-sm text-gray-600">
-          OMB M-23-02 asks for nine items about each information system. Item 4, the quantum-vulnerable cryptography,
-          comes from this scan. The other items describe the system, and only its owner can supply them. OMB M-26-15
-          (June 2026) asks for this inventory to be kept current and sets the order of migration used below.
+          Item 4 comes from this scan. Fill in the other items for the system. Priority and target phases follow OMB
+          M-26-15.
         </p>
         <p className="text-xs text-gray-500">
-          This organizes the data those memos ask for; it is not an official submission form. Agencies submit through
-          the procedure ONCD and CISA publish, and each agency decides its own priorities. Inventory details can be
-          sensitive: save them here only if your organization allows it. Otherwise fill them in, download, and leave
-          without saving.
+          Not an official submission form. Details can be sensitive: save them only if your organization allows it.
         </p>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -225,10 +221,10 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
               />
             </div>
           </Field>
-          <Field label="8. Data types" hint="As described by national records management categories.">
+          <Field label="8a. Data types" hint="Records categories the system holds.">
             <input className={inputClass} value={form.dataTypes} onChange={set("dataTypes")} maxLength={300} />
           </Field>
-          <Field label="8. Years the data needs protection" hint="Data still sensitive in 2030 makes the system a priority.">
+          <Field label="8b. Years the data must stay secret" hint="Still sensitive in 2030 or later makes the system a priority.">
             <input
               className={inputClass}
               type="number"
@@ -257,9 +253,8 @@ export default function InventoryExport({ result, at }: { result: ScanResult; at
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-800">4. Cryptographic systems: review</h3>
           <p className="text-sm text-gray-600">
-            A code scan also matches algorithm names in text and data, and cannot see cryptography handled by services.
-            Open a row to see where it was found; exclude rows or files that are not in real use, and add what the scan
-            cannot see, such as your sign-in provider&apos;s signing keys or a server&apos;s TLS settings.
+            Exclude rows or files that are not real use, such as algorithm names in text or data. Add what a code scan
+            cannot see: sign-in provider keys and server TLS.
           </p>
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={includeTests} onChange={(e) => setIncludeTests(e.target.checked)} />

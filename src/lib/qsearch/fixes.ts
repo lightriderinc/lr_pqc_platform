@@ -535,7 +535,15 @@ export interface FixPlan {
   groups: { group: FixGroup; label: string; intro: string; items: PlanItem[] }[];
   /** Findings that need a fix. */
   total: number;
+  /** Classical key exchange in files that also offer post-quantum key exchange: left out, and counted. */
+  hybridParts: number;
 }
+
+/** "1 finding needs" or "2 findings need". */
+export const needFix = (n: number) => `${n} ${n === 1 ? "finding needs" : "findings need"} a fix`;
+
+const PQ_KEY_EXCHANGE = /ML-?KEM|MLKEM|Kyber|hybrid/i;
+const CLASSICAL_HALF = new Set(["X25519", "X448", "ECDSA/ECDH"]);
 
 /** Fixes for asymmetric algorithm use, most specific first; null for other fixes. */
 function asymmetricRank(fix: Fix): number | null {
@@ -554,11 +562,27 @@ export function buildFixPlan(findings: FixFinding[], options: { includeTests: bo
   // the same asymmetric algorithm use (a JWT algorithm and its curve, say):
   // there the most specific fix wins, so the line gets one fix. Different
   // problems on one line, such as MD5 beside RSA, keep their own fixes.
+  // Files that offer post-quantum key exchange. Classical key exchange in
+  // them is either a hybrid's classical half (X25519 with ML-KEM) or a
+  // fallback offered beside the hybrid, as the TLS fixes here recommend.
+  // Only key exchange is exempt: signatures in the same file still count.
+  const hybridFiles = new Set(
+    findings.filter((f) => f.classification === "pqc-ready" && PQ_KEY_EXCHANGE.test(f.algorithm)).map((f) => f.asset),
+  );
+  let hybridParts = 0;
   const chosen: { fix: Fix; where: string }[] = [];
   for (const f of findings) {
     const fix = fixFor(f, options.now);
     if (!fix) continue;
     if (!options.includeTests && isTestPath(f.asset) && fix.id !== PRIVATE_KEY.id) continue;
+    if (
+      hybridFiles.has(f.asset) &&
+      /^code:kem:/.test(fix.id) &&
+      CLASSICAL_HALF.has(describeAlgorithm(f.algorithm, f.service, f)?.family ?? "")
+    ) {
+      hybridParts += 1;
+      continue;
+    }
     chosen.push({ fix, where: f.evidence.startsWith("sha256:") ? f.asset : f.evidence });
   }
   const best = new Map<string, Fix>();
@@ -582,7 +606,7 @@ export function buildFixPlan(findings: FixFinding[], options: { includeTests: bo
     ...g,
     items: [...items.values()].filter((i) => i.fix.group === g.group).sort((a, b) => b.count - a.count),
   })).filter((g) => g.items.length > 0);
-  return { groups, total };
+  return { groups, total, hybridParts };
 }
 
 /** How each example's format is labelled on screen, and named in Markdown code blocks. */
@@ -604,8 +628,13 @@ export const places = (count: number, locations: string[]) =>
   `${count} ${count === 1 ? "finding" : "findings"}${locations.length !== count ? ` in ${locations.length} ${locations.length === 1 ? "place" : "places"}` : ""}`;
 
 /** The plan as a Markdown document a team can work through. */
+export const hybridNote = (n: number) =>
+  `${n} ${n === 1 ? "finding is" : "findings are"} left out: classical key exchange in files that also offer post-quantum key exchange (ML-KEM). Each is either the classical half of a hybrid, which needs no change, or a fallback offered beside it, which can be removed once every peer supports the hybrid.`;
+
+/** The plan as a Markdown document a team can work through. */
 export function fixPlanMarkdown(plan: FixPlan, source: string): string {
-  const out: string[] = [`# Post-quantum fix plan`, "", `${source}. ${plan.total} findings need a fix.`, ""];
+  const out: string[] = [`# Post-quantum fix plan`, "", `${source}. ${needFix(plan.total)}.`, ""];
+  if (plan.hybridParts > 0) out.push(hybridNote(plan.hybridParts), "");
   for (const g of plan.groups) {
     out.push(`## ${g.label}`, "", g.intro, "");
     for (const { fix, count, locations } of g.items) {

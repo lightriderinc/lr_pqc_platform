@@ -74,7 +74,7 @@ export function serverRows(check: ServerCheck): Suggestions {
       service: "digital signatures",
       keyLength,
       source,
-      note: `TLS certificate, expires ${leaf.notValidAfter.slice(0, 10)}`,
+      note: leaf.notValidAfter ? `TLS certificate, expires ${leaf.notValidAfter.slice(0, 10)}` : "TLS certificate",
     });
     const k = leaf.keyAlgorithm;
     if (k.startsWith("ML-") || k.startsWith("SLH-")) safe.push(`${k} certificate`);

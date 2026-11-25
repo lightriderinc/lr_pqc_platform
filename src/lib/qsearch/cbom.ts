@@ -102,8 +102,9 @@ export function buildCbom(
             certificateProperties: {
               subjectName: f.certificate.subject,
               issuerName: f.certificate.issuer,
-              notValidBefore: f.certificate.notValidBefore,
-              notValidAfter: f.certificate.notValidAfter,
+              // Left out when unreadable: CycloneDX requires a real date here.
+              ...(f.certificate.notValidBefore ? { notValidBefore: f.certificate.notValidBefore } : {}),
+              ...(f.certificate.notValidAfter ? { notValidAfter: f.certificate.notValidAfter } : {}),
               subjectPublicKeyRef: ref,
               certificateFormat: "X.509",
             },

@@ -3,7 +3,16 @@
 import Badge from "@/components/ui/Badge";
 import DownloadButton from "@/components/ui/DownloadButton";
 import SectionPanel from "@/components/ui/SectionPanel";
-import { FORMATS, buildFixPlan, fixPlanMarkdown, places, type FixFinding, type PlanItem } from "@/lib/qsearch/fixes";
+import {
+    FORMATS,
+    buildFixPlan,
+    fixPlanMarkdown,
+    hybridNote,
+    needFix,
+    places,
+    type FixFinding,
+    type PlanItem,
+} from "@/lib/qsearch/fixes";
 import { useMemo, useState } from "react";
 
 /** Locations listed per fix; the rest are counted. */
@@ -93,7 +102,7 @@ export default function FixPlan({ findings, at }: { findings: FixFinding[]; at: 
     const stamp = at.toISOString().slice(0, 10);
 
     return (
-        <SectionPanel title="Fix plan" action={<Badge>{plan.total} findings need a fix</Badge>}>
+        <SectionPanel title="Fix plan" action={<Badge>{needFix(plan.total)}</Badge>}>
             <div className="space-y-6">
                 <p className="text-sm text-gray-600">
                     How to fix each finding, in the order to do it. Code examples were tested with the versions named; check them
@@ -103,6 +112,7 @@ export default function FixPlan({ findings, at }: { findings: FixFinding[]; at: 
                     <input type="checkbox" checked={includeTests} onChange={(e) => setIncludeTests(e.target.checked)} />
                     Include test files (private keys are always included)
                 </label>
+                {plan.hybridParts > 0 && <p className="text-xs text-gray-500">{hybridNote(plan.hybridParts)}</p>}
 
                 {plan.groups.length === 0 ? (
                     <p className="text-sm text-gray-500">Nothing to fix: no quantum-vulnerable or broken cryptography in use was found.</p>

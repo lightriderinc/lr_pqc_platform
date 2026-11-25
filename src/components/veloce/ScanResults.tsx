@@ -179,7 +179,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
     { label: "CBOM (CycloneDX 1.6)", value: cbom ?? "", filename: `qsearch-cbom-${stamp}.cdx.json`, mimeType: "application/json" },
     { label: "Findings (CSV)", value: reports.csv, filename: `qsearch-findings-${stamp}.csv`, mimeType: "text/csv" },
     { label: "Executive summary", value: reports.summary, filename: `qsearch-summary-${stamp}.txt`, mimeType: "text/plain" },
-    { label: "Findings (JSON)", value: JSON.stringify(scan, null, 2), filename: `qsearch-findings-${stamp}.json`, mimeType: "application/json" },
+    result.signed
+      ? { label: "Findings (JSON, signed)", value: JSON.stringify(result.signed, null, 2), filename: `qsearch-findings-signed-${stamp}.json`, mimeType: "application/json" }
+      : { label: "Findings (JSON)", value: JSON.stringify(scan, null, 2), filename: `qsearch-findings-${stamp}.json`, mimeType: "application/json" },
   ].filter((d) => d.value);
 
   return (
@@ -245,7 +247,7 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
         action={
           <Badge>
             {sortedFindings.length === result.findings.length
-              ? `${result.findings.length} findings`
+              ? `${result.findings.length} ${result.findings.length === 1 ? "finding" : "findings"}`
               : `${sortedFindings.length} of ${result.findings.length} findings`}
           </Badge>
         }
@@ -422,7 +424,9 @@ export default function ScanResults({ result }: { result: ScanResult | null }) {
                 {
                   label: "Valid until",
                   value: activeFinding.certificate
-                    ? new Date(activeFinding.certificate.notValidAfter).toLocaleString()
+                    ? activeFinding.certificate.notValidAfter
+                      ? new Date(activeFinding.certificate.notValidAfter).toLocaleString()
+                      : "Unreadable date in the certificate"
                     : "",
                 },
                 { label: "Confidence", value: activeFinding.confidence },

@@ -5,7 +5,7 @@ import type { ScanResult } from "@/app/qsearch/actions";
 import { runQSearch } from "@/app/qsearch/actions";
 import LRButton from "@/components/ui/LRButton";
 import { beginProtectedWork } from "@/lib/auth/protected-work";
-import { ACCEPT, ACCEPT_TEXT, MAX_UPLOAD_MB } from "@/lib/qsearch/uploads";
+import { ACCEPT, ACCEPT_TEXT, MAX_UPLOAD_MB, TOO_LARGE } from "@/lib/qsearch/uploads";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MdLogin, MdRefresh, MdSearch } from "react-icons/md";
@@ -42,7 +42,7 @@ export default function ScanConsole({
     setAuthRequired(false);
     if (selected.size > MAX_UPLOAD_MB * 1024 * 1024) {
       setFile(null);
-      setError(`This file is larger than ${MAX_UPLOAD_MB} MB. Upload a smaller ZIP, such as one folder of the project.`);
+      setError(TOO_LARGE);
       return;
     }
     setFile(selected);

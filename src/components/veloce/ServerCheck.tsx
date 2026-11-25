@@ -111,7 +111,7 @@ function Result({ check }: { check: ServerCheckResult }) {
                 <td className="border-b border-gray-100 px-4 py-3 text-sm whitespace-nowrap text-gray-700">{c.keyAlgorithm}</td>
                 <td className="border-b border-gray-100 px-4 py-3 text-sm whitespace-nowrap text-gray-700">{c.signatureAlgorithm}</td>
                 <td className={`border-b border-gray-100 px-4 py-3 text-sm whitespace-nowrap ${expired ? "text-red-700" : "text-gray-700"}`}>
-                  {new Date(c.notValidAfter).toLocaleDateString()}
+                  {c.notValidAfter ? new Date(c.notValidAfter).toLocaleDateString() : "Unreadable"}
                   {expired && " (expired)"}
                 </td>
               </tr>
@@ -120,7 +120,15 @@ function Result({ check }: { check: ServerCheckResult }) {
         </TableShell>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        {check.signed && (
+          <DownloadButton
+            label="Signed result (JSON)"
+            value={JSON.stringify(check.signed, null, 2)}
+            filename={`server-check-signed-${check.host}-${check.checkedAt.slice(0, 10)}.json`}
+            mimeType="application/json"
+          />
+        )}
         <DownloadButton
           label="CBOM (CycloneDX 1.6)"
           value={cbom}
@@ -142,7 +150,7 @@ export default function ServerCheck() {
 
   async function check() {
     if (!host.trim() || checking) return;
-        setChecking(true);
+    setChecking(true);
     setError(null);
     try {
       const response = await runServerCheck(host, port);

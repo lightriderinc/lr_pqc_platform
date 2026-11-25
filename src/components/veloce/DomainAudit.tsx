@@ -7,6 +7,8 @@ import SectionPanel from "@/components/ui/SectionPanel";
 import TableShell from "@/components/ui/TableShell";
 import { auditFindings } from "@/lib/qsearch/auditFindings";
 import type { Challenge, DomainAudit as Audit, HostResult } from "@/lib/qsearch/domainAudit";
+import type { SignedResult } from "@/lib/qsearch/attestation";
+import DownloadButton from "@/components/ui/DownloadButton";
 import { useMemo, useState } from "react";
 import { MdPublic } from "react-icons/md";
 import FixPlan from "./FixPlan";
@@ -28,7 +30,7 @@ function Copyable({ label, value }: { label: string; value: string }) {
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             },
-            () => {},
+            () => { },
           )
         }
       >
@@ -52,7 +54,15 @@ function KeyExchange({ host }: { host: HostResult }) {
   );
 }
 
-function Result({ audit, challenge }: { audit: Audit; challenge: Challenge | null }) {
+function Result({
+  audit,
+  challenge,
+  signed,
+}: {
+  audit: Audit;
+  challenge: Challenge | null;
+  signed: SignedResult<Audit> | null;
+}) {
   const s = audit.summary;
   const at = useMemo(() => new Date(audit.checkedAt), [audit.checkedAt]);
   const findings = useMemo(() => auditFindings(audit), [audit]);
@@ -113,7 +123,7 @@ function Result({ audit, challenge }: { audit: Audit; challenge: Challenge | nul
                 </td>
                 <td className={cell}>{leaf?.keyAlgorithm ?? "—"}</td>
                 <td className={`${cell} whitespace-nowrap ${expired ? "text-red-700" : ""}`}>
-                  {leaf ? new Date(leaf.notValidAfter).toLocaleDateString() : "—"}
+                  {leaf?.notValidAfter ? new Date(leaf.notValidAfter).toLocaleDateString() : leaf ? "Unreadable" : "—"}
                   {expired && " (expired)"}
                 </td>
               </tr>
@@ -149,6 +159,17 @@ function Result({ audit, challenge }: { audit: Audit; challenge: Challenge | nul
       )}
 
       {audit.verified && <FixPlan findings={findings} at={at} />}
+
+      {signed && (
+        <div className="flex justify-end">
+          <DownloadButton
+            label="Signed audit (JSON)"
+            value={JSON.stringify(signed, null, 2)}
+            filename={`domain-audit-signed-${audit.domain}-${audit.checkedAt.slice(0, 10)}.json`}
+            mimeType="application/json"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -158,7 +179,11 @@ export default function DomainAudit() {
   const [domain, setDomain] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ audit: Audit; challenge: Challenge | null } | null>(null);
+  const [result, setResult] = useState<{
+    audit: Audit;
+    challenge: Challenge | null;
+    signed: SignedResult<Audit> | null;
+  } | null>(null);
 
   async function audit() {
     if (!domain.trim() || busy) return;
@@ -213,7 +238,14 @@ export default function DomainAudit() {
             {error}
           </p>
         )}
-        {result && <Result key={`${result.audit.domain}:${result.audit.checkedAt}`} audit={result.audit} challenge={result.challenge} />}
+        {result && (
+          <Result
+            key={`${result.audit.domain}:${result.audit.checkedAt}`}
+            audit={result.audit}
+            challenge={result.challenge}
+            signed={result.signed}
+          />
+        )}
       </SectionPanel>
     </div>
   );

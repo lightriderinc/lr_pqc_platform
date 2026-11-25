@@ -35,6 +35,12 @@ interface FindingRef {
 
 const NONE: KeyDetails = { keyBits: null, parameterSet: null, keySource: null, certificate: null };
 
+/** An ISO date, or "" when a certificate's date cannot be read (some test certificates are malformed on purpose). */
+function isoDate(text: string): string {
+  const d = new Date(text);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 /** Reads files inside root only, once each. Missing or unsafe paths give null. */
 function fileReader(root: string) {
   const cache = new Map<string, Promise<Buffer | null>>();
@@ -114,8 +120,8 @@ function fromCertificate(file: Buffer, fingerprint: string): Omit<KeyDetails, "k
       certificate: {
         subject: cert.subject.split("\n").join(", "),
         issuer: cert.issuer.split("\n").join(", "),
-        notValidBefore: new Date(cert.validFrom).toISOString(),
-        notValidAfter: new Date(cert.validTo).toISOString(),
+        notValidBefore: isoDate(cert.validFrom),
+        notValidAfter: isoDate(cert.validTo),
       },
     };
   }
@@ -125,33 +131,35 @@ function fromCertificate(file: Buffer, fingerprint: string): Omit<KeyDetails, "k
 /** Key details for each finding, in the same order. Never throws for one bad file. */
 export async function keyDetails(findings: FindingRef[], root: string): Promise<KeyDetails[]> {
   const read = fileReader(root);
-  return Promise.all(
-    findings.map(async (f): Promise<KeyDetails> => {
-      const known = describeAlgorithm(f.algorithm, f.service);
-      if (!known) return NONE;
-      // Sizes fixed by the algorithm name, such as "RSA-2048" or "X25519".
-      const byName =
-        known.keyBits || (known.parameterSet && known.family !== "RSA")
-          ? { keyBits: known.keyBits, parameterSet: known.parameterSet, keySource: "algorithm" as const }
-          : null;
+  // Each finding on its own: an unexpected problem with one file leaves that
+  // finding without details, instead of failing the whole scan.
+  return Promise.all(findings.map((f) => detailsFor(f, read).catch(() => NONE)));
+}
 
-      const cert = /^sha256:([0-9a-f]{64})$/i.exec(f.evidence);
-      if (cert) {
-        const file = await read(f.asset);
-        const found = file ? fromCertificate(file, cert[1].toLowerCase()) : null;
-        if (!found) return byName ? { ...byName, certificate: null } : NONE;
-        return found.keyBits
-          ? { ...found, keySource: "certificate" }
-          : { ...found, keyBits: byName?.keyBits ?? null, parameterSet: byName?.parameterSet ?? null, keySource: byName ? "algorithm" : null };
-      }
-      if (byName) return { ...byName, certificate: null };
+async function detailsFor(f: FindingRef, read: ReturnType<typeof fileReader>): Promise<KeyDetails> {
+  const known = describeAlgorithm(f.algorithm, f.service);
+  if (!known) return NONE;
+  // Sizes fixed by the algorithm name, such as "RSA-2048" or "X25519".
+  const byName =
+    known.keyBits || (known.parameterSet && known.family !== "RSA")
+      ? { keyBits: known.keyBits, parameterSet: known.parameterSet, keySource: "algorithm" as const }
+      : null;
 
-      const line = /^(.+):(\d+)$/.exec(f.evidence);
-      const file = line ? await read(line[1]) : null;
-      if (!line || !file) return NONE;
-      const text = file.toString("utf8").split(/\r?\n/)[Number(line[2]) - 1] ?? "";
-      const found = fromCode(known.family, text);
-      return found ? { ...found, keySource: "code", certificate: null } : NONE;
-    }),
-  );
+  const cert = /^sha256:([0-9a-f]{64})$/i.exec(f.evidence);
+  if (cert) {
+    const file = await read(f.asset);
+    const found = file ? fromCertificate(file, cert[1].toLowerCase()) : null;
+    if (!found) return byName ? { ...byName, certificate: null } : NONE;
+    return found.keyBits
+      ? { ...found, keySource: "certificate" }
+      : { ...found, keyBits: byName?.keyBits ?? null, parameterSet: byName?.parameterSet ?? null, keySource: byName ? "algorithm" : null };
+  }
+  if (byName) return { ...byName, certificate: null };
+
+  const line = /^(.+):(\d+)$/.exec(f.evidence);
+  const file = line ? await read(line[1]) : null;
+  if (!line || !file) return NONE;
+  const text = file.toString("utf8").split(/\r?\n/)[Number(line[2]) - 1] ?? "";
+  const found = fromCode(known.family, text);
+  return found ? { ...found, keySource: "code", certificate: null } : NONE;
 }

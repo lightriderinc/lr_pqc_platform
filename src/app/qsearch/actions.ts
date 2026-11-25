@@ -7,6 +7,8 @@ import { keyDetails, type CertificateDetails, type KeySource } from "@/lib/qsear
 import { redactDetail } from "@/lib/qsearch/redact";
 import { CheckError, checkServer, serverFindings, type ServerCheck } from "@/lib/qsearch/serverCheck";
 import { checkProvider, type ProviderCheck } from "@/lib/qsearch/identityProvider";
+import { sha256Hex, type SignedResult } from "@/lib/qsearch/attestation";
+import { signResult, signingPublicKey } from "@/lib/qsearch/signing";
 import { auditDomain, challengeFor, realDeps, type Challenge, type DomainAudit } from "@/lib/qsearch/domainAudit";
 import {
   deleteScan as deleteStoredScan,
@@ -20,12 +22,13 @@ import {
 import { execFile } from "child_process";
 import { randomBytes } from "crypto";
 import { unzipSync } from "fflate";
+
 import { chmodSync } from "fs";
 import { mkdir, readFile, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, isAbsolute, join, relative } from "path";
 import { promisify } from "util";
-import { MAX_UPLOAD_MB, SINGLE_FILE_EXTS as SINGLE_FILE_LIST } from "@/lib/qsearch/uploads";
+import { MAX_UPLOAD_MB, SINGLE_FILE_EXTS as SINGLE_FILE_LIST, TOO_LARGE } from "@/lib/qsearch/uploads";
 
 const execFileAsync = promisify(execFile);
 
@@ -92,7 +95,7 @@ export type SavedScan = {
 };
 
 /** `saved` is null when the scan could not be saved to history. */
-export type ScanResult = ScanData & { saved: SavedScan | null };
+export type ScanResult = ScanData & { signed?: SignedResult | null; saved: SavedScan | null };
 
 type Failure = { ok: false; error: string; authRequired?: boolean };
 type QSearchResponse = { ok: true; data: ScanResult } | Failure;
@@ -185,7 +188,7 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
   }
 
   if (file.size > MAX_UPLOAD) {
-    return { ok: false, error: `File is larger than ${MAX_UPLOAD_MB} MB.` };
+    return { ok: false, error: TOO_LARGE };
   }
 
   const ext = getExt(file.name);
@@ -208,6 +211,8 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
     await mkdir(outDir, { recursive: true });
 
     const bytes = new Uint8Array(await file.arrayBuffer());
+    const uploadSha256 = sha256Hex(bytes);
+
 
     if (isZip) {
       try {
@@ -286,7 +291,13 @@ export async function runQSearch(formData: FormData): Promise<QSearchResponse> {
     // Read before the uploaded files are deleted in `finally`.
     const keys = await keyDetails(data.findings, srcDir);
     data.findings = data.findings.map((f, i) => ({ ...f, ...keys[i] }));
-    return { ok: true, data: { ...data, saved: await save(owner, safeFileName(file.name), data) } };
+    // Signed at scan time: proves qSearch produced exactly these findings for this upload.
+    const signed = signResult(
+      "code-scan",
+      { fileName: file.name.slice(0, 200), uploadSha256, bytes: bytes.length, scanner: `qSearch ${raw.tool_version ?? "unknown"}` },
+      { files_scanned: data.files_scanned, quantum_vulnerable: data.quantum_vulnerable, high_risk: data.high_risk, pqc_ready: data.pqc_ready, findings: data.findings },
+    );
+    return { ok: true, data: { ...data, signed, saved: await save(owner, safeFileName(file.name), data) } };
   } catch (err: unknown) {
     if (err instanceof UserError) return { ok: false, error: err.message };
     // Details stay in the server log; the user sees a message with no paths.
@@ -400,7 +411,11 @@ function rateLimited(owner: string, kind: "scan" | "check" | "audit"): boolean {
   return false;
 }
 
-export type ServerCheckResult = ServerCheck & { findings: ReturnType<typeof serverFindings> };
+export type ServerCheckResult = ServerCheck & {
+  findings: ReturnType<typeof serverFindings>;
+  /** The check, signed when it was made; null when signing is not set up. */
+  signed: SignedResult<ServerCheck> | null;
+};
 
 /** Connects to a server the user names and reports its key exchange and certificates. */
 export async function runServerCheck(
@@ -417,7 +432,8 @@ export async function runServerCheck(
   }
   try {
     const check = await checkServer(host, port);
-    return { ok: true, data: { ...check, findings: serverFindings(check) } };
+    const signed = signResult("server-check", { host: check.host, port: check.port }, check);
+    return { ok: true, data: { ...check, findings: serverFindings(check), signed } };
   } catch (e) {
     if (e instanceof CheckError) return { ok: false, error: e.message };
     console.error("Server check failed:", e);
@@ -468,7 +484,9 @@ export async function runProviderCheck(input: unknown): Promise<{ ok: true; data
  */
 export async function runDomainAudit(
   input: unknown,
-): Promise<{ ok: true; data: { audit: DomainAudit; challenge: Challenge | null } } | Failure> {
+): Promise<
+  { ok: true; data: { audit: DomainAudit; challenge: Challenge | null; signed: SignedResult<DomainAudit> | null } } | Failure
+> {
   const owner = await currentOwner();
   if (!owner) return SIGNED_OUT;
   if (typeof input !== "string") return { ok: false, error: "Enter a domain, such as example.com." };
@@ -478,10 +496,16 @@ export async function runDomainAudit(
   try {
     const deps = realDeps();
     const audit = await auditDomain(owner, input, deps);
-    return { ok: true, data: { audit, challenge: deps.secret ? challengeFor(owner, audit.domain, deps.secret) : null } };
+    const signed = signResult("domain-audit", { domain: audit.domain, verified: audit.verified }, audit);
+    return { ok: true, data: { audit, challenge: deps.secret ? challengeFor(owner, audit.domain, deps.secret) : null, signed } };
   } catch (e) {
     if (e instanceof CheckError) return { ok: false, error: e.message };
     console.error("Domain audit failed:", e);
     return { ok: false, error: "The domain could not be audited." };
   }
+}
+
+/** The public key that signs qSearch results, for checking them. Public by design. */
+export async function getSigningKey(): Promise<{ keyId: string; publicKey: string } | null> {
+  return signingPublicKey();
 }
